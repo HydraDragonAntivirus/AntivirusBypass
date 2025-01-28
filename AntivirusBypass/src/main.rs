@@ -14,14 +14,15 @@ use std::thread::sleep;
 fn is_in_safe_mode() -> bool {
     // Run the bcdedit command and filter for "safeboot"
     let output = Command::new("cmd")
-        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
+        .args(["/C", "bcdedit /enum {current}"])
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .output();
 
     match output {
         Ok(output) => {
-            if !output.stdout.is_empty() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if output_str.contains("safeboot") {
                 println!("Safe Mode detected.");
                 true
             } else {
