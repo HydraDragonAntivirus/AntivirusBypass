@@ -211,10 +211,21 @@ fn reboot_system() -> io::Result<()> {
 
 fn check_avast_installed() -> bool {
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    match hkcu.open_subkey(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Avast") {
+
+    // Check if Avast is installed by looking at the uninstall registry
+    let avast_installed = match hkcu.open_subkey(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Avast Antivirus") {
         Ok(_) => true,  // Avast is installed
         Err(_) => false, // Avast not found
-    }
+    };
+
+    // Check if Avast service is running by checking the registry under Services
+    let avast_service_running = match hkcu.open_subkey(r"SYSTEM\CurrentControlSet\Services\avast! Antivirus") {
+        Ok(_) => true,  // Avast service is running
+        Err(_) => false, // Avast service not found
+    };
+
+    // If either check confirms Avast is installed and running, return true
+    avast_installed || avast_service_running
 }
 
 fn main() {
