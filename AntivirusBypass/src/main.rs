@@ -9,28 +9,55 @@ use std::env;
 use std::ffi::OsString;
 use std::time::Duration;
 use std::thread::sleep;
-use std::os::windows::process::CommandExt;
-
-const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn is_in_safe_mode() -> bool {
-    let output = Command::new("cmd")
-        .args([
-            "/C",
-            "bcdedit /enum {current} | findstr /i \"safeboot\""
-        ])
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .status()
-        .unwrap_or_else(|_| std::process::exit(1));
+    let batch_content = r#"@echo off
+bcdedit /enum {current} | findstr /i "safeboot"
+if %errorlevel% == 0 (
+    echo Safe Mode detected > "C:\Program Files\utkudrk2\test.txt"
+) else (
+    del "C:\Program Files\utkudrk2\test.txt" 2>nul
+)"#;
 
-    let is_safe_mode = output.success();
-    
-    if is_safe_mode {
-        println!("Safe Mode is enabled, proceeding with actions...");
+    // Define paths
+    let dir_path = Path::new(r"C:\Program Files\utkudrk2");
+    let batch_path = dir_path.join("utkubaba.bat");
+    let test_file_path = dir_path.join("test.txt");
+
+    // Ensure the directory exists
+    if let Err(e) = fs::create_dir_all(dir_path) {
+        eprintln!("Failed to create directory: {}", e);
+        return false;
     }
-    
+
+    // Write the batch script
+    if let Err(e) = fs::write(&batch_path, batch_content) {
+        eprintln!("Failed to write batch file: {}", e);
+        return false;
+    }
+
+    // Execute the batch script
+    if let Err(e) = Command::new("cmd")
+        .args(["/C", batch_path.to_str().unwrap()])
+        .status()
+    {
+        eprintln!("Failed to execute batch script: {}", e);
+        return false;
+    }
+
+    // Check if Safe Mode was detected by the existence of the file
+    let is_safe_mode = test_file_path.exists();
+
+    // Cleanup: remove the batch file and test.txt if exists
+    if let Err(e) = fs::remove_file(&batch_path) {
+        eprintln!("Failed to remove batch file: {}", e);
+    }
+    if test_file_path.exists() {
+        if let Err(e) = fs::remove_file(&test_file_path) {
+            eprintln!("Failed to remove test.txt: {}", e);
+        }
+    }
+
     is_safe_mode
 }
 
