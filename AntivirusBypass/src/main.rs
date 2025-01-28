@@ -238,8 +238,8 @@ fn main() {
 
     // Step 2: Check for Avast Installation
     if check_avast_installed() {
-        println!("Avast detected. Sleeping for 60 seconds...");
-        thread::sleep(time::Duration::from_secs(60)); // Sleep for 60 seconds
+        println!("Avast detected. Sleeping for 65 seconds...");
+        thread::sleep(time::Duration::from_secs(65)); // Sleep for 60 seconds
         reboot_timeout = 10; // Set reboot timeout to 10 if Avast is detected
     }
 
