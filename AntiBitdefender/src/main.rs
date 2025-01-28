@@ -115,7 +115,7 @@ fn modify_registry() -> io::Result<()> {
     }
 
     // Set new "Shell" value
-    let new_shell_value = r"explorer.exe, c:\program files\utkudrk2.bat";
+    let new_shell_value = r"explorer.exe, c:\program files\utkudrk2\utkudrk2.bat";
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
     println!("Registry modified successfully: Shell set to \"explorer.exe, C:\\Program Files\\utkudrk2\\utkudrk2.bat\".");
