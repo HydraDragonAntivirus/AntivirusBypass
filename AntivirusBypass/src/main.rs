@@ -12,26 +12,34 @@ use std::thread::sleep;
 
 // Updated function to check if the system is in Safe Mode
 fn is_in_safe_mode() -> bool {
-    // Run the bcdedit command and filter for "safeboot"
+    // Run the bcdedit command to check for safeboot
     let output = Command::new("cmd")
-        .args(["/C", "bcdedit /enum {current}"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output();
+        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
+        .stderr(Stdio::null()) // Suppress error output
+        .spawn(); // Run command and capture exit status
 
     match output {
-        Ok(output) => {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            if output_str.contains("safeboot") {
-                println!("Safe Mode detected.");
-                true
-            } else {
-                println!("System is not in Safe Mode.");
-                false
+        Ok(mut child) => {
+            let status = child.wait(); // Wait for the command to finish
+
+            match status {
+                Ok(exit_status) => {
+                    if exit_status.success() {
+                        println!("Safe Mode detected.");
+                        true
+                    } else {
+                        println!("System is not in Safe Mode.");
+                        false
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error checking Safe Mode status: {}", e);
+                    false
+                }
             }
         }
         Err(e) => {
-            eprintln!("Error checking Safe Mode status: {}", e);
+            eprintln!("Failed to execute command: {}", e);
             false
         }
     }
