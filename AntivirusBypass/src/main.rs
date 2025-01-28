@@ -9,40 +9,80 @@ use std::env;
 use std::ffi::OsString;
 use std::time::Duration;
 use std::thread::sleep;
+use std::os::windows::process::CommandExt;
 
-// Updated function to check if the system is in Safe Mode
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 fn is_in_safe_mode() -> bool {
-    // Run the bcdedit command to check for safeboot
-    let output = Command::new("cmd")
-        .args(["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
-        .stderr(Stdio::null()) // Suppress error output
-        .spawn(); // Run command and capture exit status
+    // Check the registry for SafeBoot
+    let reg_check = Command::new("reg")
+        .args(["query", "HKLM\\SYSTEM\\CurrentControlSet\\Control\\SafeBoot"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
 
-    match output {
-        Ok(mut child) => {
-            let status = child.wait(); // Wait for the command to finish
-
-            match status {
-                Ok(exit_status) => {
-                    if exit_status.success() {
-                        println!("Safe Mode detected.");
-                        true
-                    } else {
-                        println!("System is not in Safe Mode.");
-                        false
-                    }
-                },
-                Err(e) => {
-                    eprintln!("Error checking Safe Mode status: {}", e);
-                    false
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to execute command: {}", e);
-            false
+    if let Ok(output) = reg_check {
+        if !output.stdout.is_empty() {
+            println!("Safe Mode detected via registry");
+            return true;
         }
     }
+
+    // Check environment variable
+    let bootmode_check = Command::new("cmd")
+        .args(["/C", "echo %SAFEBOOT_OPTION%"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+
+    if let Ok(output) = bootmode_check {
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        if !output_str.trim().is_empty() && output_str.trim() != "%SAFEBOOT_OPTION%" {
+            println!("Safe Mode detected via environment variable");
+            return true;
+        }
+    }
+
+    // Check using msinfo32
+    let msinfo_check = Command::new("cmd")
+        .args(["/C", "msinfo32 /report %temp%\\msinfo.txt /categories +SystemSummary"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    if let Ok(_) = msinfo_check {
+        // Give it a moment to generate the report
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        
+        let read_report = Command::new("cmd")
+            .args(["/C", "type %temp%\\msinfo.txt | findstr /i \"Boot Mode\""])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output();
+
+        if let Ok(output) = read_report {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if output_str.to_lowercase().contains("safe") {
+                println!("Safe Mode detected via msinfo32");
+                // Clean up the temporary file
+                let _ = Command::new("cmd")
+                    .args(["/C", "del %temp%\\msinfo.txt"])
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .spawn();
+                return true;
+            }
+        }
+        // Clean up the temporary file
+        let _ = Command::new("cmd")
+            .args(["/C", "del %temp%\\msinfo.txt"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+    }
+
+    println!("System is not in Safe Mode");
+    false
 }
 
 fn disable_uac() -> io::Result<()> {
