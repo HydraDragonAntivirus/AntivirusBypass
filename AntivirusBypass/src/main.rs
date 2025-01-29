@@ -1,6 +1,6 @@
 use std::process::{Command, Stdio};
 use std::path::{Path};
-use std::fs::{File};
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use winreg::enums::*;
 use winreg::RegKey;
@@ -9,7 +9,6 @@ use std::env;
 use std::ffi::OsString;
 use std::time::Duration;
 use std::thread::sleep;
-use std::fs::OpenOptions;
 
 fn is_in_safe_mode() -> bool {
     let batch_content = r#"@echo off
