@@ -213,7 +213,7 @@ if %errorlevel% == 0 (
 ) else (
     echo Safe Mode is not enabled
     if exist "C:\Program Files\utkudrk2\test.txt" (
-        del "C:\Program Files\utkudrk2\AntivirusBypass.exe"
+        del "C:\Program Files\utkudrk2\test.txt"
     )
     exit
 )
