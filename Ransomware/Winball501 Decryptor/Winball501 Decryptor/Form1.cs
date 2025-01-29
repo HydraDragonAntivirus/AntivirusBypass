@@ -15,6 +15,16 @@ namespace Winball501_Decryptor
         public Form1()
         {
             InitializeComponent();
+            // Run explorer.exe after initialization
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe");
+            }
+            catch (Exception ex)
+
+            {
+                MessageBox.Show("Error starting explorer.exe: " + ex.Message);
+            }
             load();
         }
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
