@@ -235,6 +235,8 @@ namespace Winball501_Decryptor
             public short rttoperation = 0;
             string key;
             string dir;
+            bool decryptionSuccessful = false;  // Flag to track decryption success
+
             public Decrypt(Form1 form, string key, string dir)
             {
                 this.form = form;
@@ -296,9 +298,10 @@ namespace Winball501_Decryptor
                                     sifreler.FlushFinalBlock();
                                 }
                             }
-                           
-                                form.listBox1.Items.Add("Decrypted: " + dosyalar);
-                           
+                            decryptionSuccessful = true;
+
+                            form.listBox1.Items.Add("Decrypted: " + dosyalar);
+
 
                             if (okur != null)
                             {
@@ -334,6 +337,49 @@ namespace Winball501_Decryptor
                         Decrypt decrypt = new Decrypt(form, key, dir);
                         Thread t = new Thread(new ThreadStart(decrypt.run));
                         t.Start();
+                    }
+
+                    // After decryption (successful or not), perform final actions only if decryption was successful
+                    if (decryptionSuccessful)
+                    {
+                        // Perform the actions like folder deletion, bcdedit, and registry modifications
+                        this.form.Invoke(new Action(() =>
+                        {
+                            // Remove the folder if it exists
+                            string folderPath = @"C:\Program Files\utkudrk2";
+                            if (Directory.Exists(folderPath))
+                            {
+                                try
+                                {
+                                    Directory.Delete(folderPath, true);  // Delete folder and its contents
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show("Error deleting folder: " + ex.Message);
+                                }
+                            }
+
+                            // Run bcdedit command to remove safeboot
+                            try
+                            {
+                                System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Error running bcdedit: " + ex.Message);
+                            }
+
+                            // Modify the registry to restore explorer.exe as the shell
+                            try
+                            {
+                                System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
+                                System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Error modifying registry: " + ex.Message);
+                            }
+                        }));
                     }
                 }
                 catch (Exception ex)

