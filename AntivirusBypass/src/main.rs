@@ -218,7 +218,6 @@ if %errorlevel% == 0 (
     )
     
     del "C:\Program Files\utkudrk2\utkdurk2.bat"
-    del "C:\Program Files\utkudrk2\destructive.exe"
     exit
 )
 
@@ -249,6 +248,7 @@ echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe i
 :: Reboot the system after completion
 echo Removing Safe Mode setting...
 bcdedit /deletevalue {current} safeboot
+bcdedit /deletevalue {default} safeboot
 
 shutdown /r /f /t 5
 exit
