@@ -216,8 +216,6 @@ if %errorlevel% == 0 (
     if exist "C:\Program Files\utkudrk2\test.txt" (
         del "C:\Program Files\utkudrk2\AntivirusBypass.exe"
     )
-    
-    del "C:\Program Files\utkudrk2\utkdurk2.bat"
     exit
 )
 
