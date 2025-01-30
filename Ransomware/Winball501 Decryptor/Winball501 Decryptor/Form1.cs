@@ -90,26 +90,6 @@ namespace Winball501_Decryptor
                         Console.WriteLine($"Error during bcdedit execution. Exit code: {process.ExitCode}");
                     }
                 }
-
-                // Add default boot option if required
-                startInfo.Arguments = "/c bcdedit /default {current}";
-                using (Process process = new Process())
-                {
-                    process.StartInfo = startInfo;
-                    process.Start();
-
-                    // Wait for the process to finish
-                    process.WaitForExit();
-
-                    if (process.ExitCode == 0)
-                    {
-                        Console.WriteLine("Default boot option set successfully.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error during setting default boot option. Exit code: {process.ExitCode}");
-                    }
-                }
             }
             catch (Exception ex)
             {
