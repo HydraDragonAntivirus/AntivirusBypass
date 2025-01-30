@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Management;
 using multronfileguardian;
+using Microsoft.Win32;
+using System.Diagnostics;
 
 namespace Winball501_Decryptor
 {
@@ -16,7 +18,7 @@ namespace Winball501_Decryptor
         public Form1()
         {
             InitializeComponent();
-            load();
+            this.Visible = false;
             if (IsSafeMode())
             {
                 ModifyRegistry();
@@ -25,38 +27,92 @@ namespace Winball501_Decryptor
             }
             else
             {
-               ModifyRegistry();
+                load();
+                ModifyRegistry();
             }
         }
         static bool IsSafeMode()
         {
-            using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem"))
+            try
             {
-                foreach (var obj in searcher.Get())
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SafeBoot"))
                 {
-                    var bootOptions = obj["BootOptionOnLimit"];
-                    if (bootOptions != null && bootOptions.ToString().Contains("SAFEBOOT"))
+                    if (key != null)
                     {
-                        return true;
+                         
+                        string[] subKeys = key.GetSubKeyNames();
+
+                        if (subKeys.Length > 0)
+                        {
+                             return true;
+                        }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error checking Safe Mode: " + ex.Message);
+            }
+
             return false;
         }
         static void RemoveSafeBoot()
         {
+            string logFilePath = Environment.CurrentDirectory + "\\logfile.txt";  
+
             try
             {
-                System.Diagnostics.Process.Start("cmd.exe", "/c bcdedit /deletevalue {current} safeboot");
+             
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/c bcdedit /deletevalue {current} safeboot",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,  
+                    CreateNoWindow = true,  
+                    Verb = "runas"         
+                };
+
+                using (Process process = new Process())
+                {
+                    process.StartInfo = startInfo;
+                    process.Start();
+
+                 
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+
+                    process.WaitForExit();
+                     
+                    using (StreamWriter logFile = new StreamWriter(logFilePath, true))
+                    {
+                        logFile.WriteLine($"[{DateTime.Now}] - Attempting to remove Safe Mode boot option...");
+                        logFile.WriteLine($"[{DateTime.Now}] - Command executed: bcdedit /deletevalue current safeboot");
+                        if (process.ExitCode == 0)
+                        {
+                            logFile.WriteLine($"[{DateTime.Now}] - Safe Mode boot option removed successfully.");
+                        }
+                        else
+                        {
+                            logFile.WriteLine($"[{DateTime.Now}] - Error during bcdedit execution: {error}");
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error running bcdedit: " + ex.Message);
+                
+                using (StreamWriter logFile = new StreamWriter(logFilePath, true))
+                {
+                    logFile.WriteLine($"[{DateTime.Now}] - An error occurred while attempting to remove Safe Mode: {ex.Message}");
+                }
             }
         }
 
         static void ModifyRegistry()
         {
+            string logFilePath = Environment.CurrentDirectory + "\\logfile.txt";
             try
             {
                 System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
@@ -64,7 +120,11 @@ namespace Winball501_Decryptor
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error modifying registry: " + ex.Message);
+                using (StreamWriter logFile = new StreamWriter(logFilePath, true))
+                {
+                    logFile.WriteLine($"[{DateTime.Now}] Error modifying registry: " + ex.Message);
+                }
+              
             }
         }
 
@@ -72,7 +132,7 @@ namespace Winball501_Decryptor
         {
             try
             {
-                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
+                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 5");
             }
             catch (Exception ex)
             {
@@ -502,6 +562,11 @@ namespace Winball501_Decryptor
                 Thread downloadThread = new Thread(new ThreadStart(decryptForDownloads.run));
                 downloadThread.Start();
             }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
     }
 
