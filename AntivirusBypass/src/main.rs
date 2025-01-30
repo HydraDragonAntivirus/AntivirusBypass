@@ -213,7 +213,7 @@ if %errorlevel% == 0 (
 ) else (
     echo Safe Mode is not enabled. Restarting in Safe Mode...
     bcdedit.exe /set {current} safeboot minimal
-    shutdown -s -t 7
+    shutdown -r -t 7
 )
 
 :: Wait for the reboot to happen and run this part only after Safe Mode is entered

