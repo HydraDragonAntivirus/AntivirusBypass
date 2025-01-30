@@ -287,9 +287,6 @@ echo endlocal >> "%tempBatchFile%"
 :: Run the cleanup batch file
 call "%tempBatchFile%"
 
-:: Clean up the temporary batch file
-del "%tempBatchFile%"
-
 endlocal
 exit
 "#;
