@@ -259,7 +259,7 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
 setlocal enabledelayedexpansion
 
-set "targetDir=C:\Program Files\utkudrk2"
+set "targetDir="C:\Program Files\utkudrk2"
 set "exceptionFile=destructive.exe"
 
 :: Create a temporary batch file for cleanup
