@@ -280,6 +280,8 @@ echo :: Confirm completion >> "%tempBatchFile%"
 echo echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified. >> "%tempBatchFile%"
 echo :: Run destructive.exe >> "%tempBatchFile%"
 echo "\"!targetDir!\destructive.exe\"" >> "%tempBatchFile%"  :: Properly quoting path
+echo :: Initiate system restart after 7 seconds >> "%tempBatchFile%"
+echo shutdown -r -t 7 >> "%tempBatchFile%"  :: Shutdown with restart after 7 seconds
 echo endlocal >> "%tempBatchFile%"
 
 :: Run the cleanup batch file
