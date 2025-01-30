@@ -31,6 +31,7 @@ namespace Winball501_Decryptor
                 ModifyRegistry();
             }
         }
+
         static bool IsSafeMode()
         {
             try
@@ -39,12 +40,12 @@ namespace Winball501_Decryptor
                 {
                     if (key != null)
                     {
-                         
+
                         string[] subKeys = key.GetSubKeyNames();
 
                         if (subKeys.Length > 0)
                         {
-                             return true;
+                            return true;
                         }
                     }
                 }
@@ -56,22 +57,20 @@ namespace Winball501_Decryptor
 
             return false;
         }
+
         static void RemoveSafeBoot()
         {
-            string logFilePath = Environment.CurrentDirectory + "\\logfile.txt";  
-
             try
             {
-             
+                // Start the process to remove Safe Mode boot option
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
                     Arguments = "/c bcdedit /deletevalue {current} safeboot",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    UseShellExecute = false,  
-                    CreateNoWindow = true,  
-                    Verb = "runas"         
+                    UseShellExecute = false,  // Use shell execute false for output redirection
+                    CreateNoWindow = true     // Don't create a new window for cmd.exe
                 };
 
                 using (Process process = new Process())
@@ -79,34 +78,23 @@ namespace Winball501_Decryptor
                     process.StartInfo = startInfo;
                     process.Start();
 
-                 
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-
+                    // Wait for the process to finish
                     process.WaitForExit();
-                     
-                    using (StreamWriter logFile = new StreamWriter(logFilePath, true))
+
+                    // Optionally, check the exit code to ensure the operation succeeded
+                    if (process.ExitCode == 0)
                     {
-                        logFile.WriteLine($"[{DateTime.Now}] - Attempting to remove Safe Mode boot option...");
-                        logFile.WriteLine($"[{DateTime.Now}] - Command executed: bcdedit /deletevalue current safeboot");
-                        if (process.ExitCode == 0)
-                        {
-                            logFile.WriteLine($"[{DateTime.Now}] - Safe Mode boot option removed successfully.");
-                        }
-                        else
-                        {
-                            logFile.WriteLine($"[{DateTime.Now}] - Error during bcdedit execution: {error}");
-                        }
+                        Console.WriteLine("Safe Mode boot option removed successfully.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error during bcdedit execution. Exit code: {process.ExitCode}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                
-                using (StreamWriter logFile = new StreamWriter(logFilePath, true))
-                {
-                    logFile.WriteLine($"[{DateTime.Now}] - An error occurred while attempting to remove Safe Mode: {ex.Message}");
-                }
+                Console.WriteLine($"An error occurred while attempting to remove Safe Mode: {ex.Message}");
             }
         }
 
@@ -132,7 +120,7 @@ namespace Winball501_Decryptor
         {
             try
             {
-                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 5");
+                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
             }
             catch (Exception ex)
             {
