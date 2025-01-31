@@ -165,8 +165,28 @@ rd /s /q "C:\Program Files (x86)\Webroot\"
 rd /s /q "C:\ProgramData\WRCore\"
 reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
-reg delete "HKLM\SYSTEM\ContrelSet001\Services\avast! Antivirus" /f
-reg delete "HKLM\SYSTEM\ContrelSet002\Services\avast! Antivirus" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswApPct" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswApPct" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsdriver" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsdriver" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsh" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsh" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbuniv" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbuniv" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswElam" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswElam" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswKbd" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswKbd" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswMonFit" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswMonFit" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswNetHub" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswNetHub" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRdr" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRdr" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRvrt" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
 reg Delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
 reg Delete "HKLM\SOFTWARE\WRData" /f

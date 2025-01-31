@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32;
 using multronfileguardian;
 
 namespace Winball501_Decryptor
@@ -19,7 +20,33 @@ namespace Winball501_Decryptor
         }
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
-        
+
+        static bool IsSafeMode()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SafeBoot"))
+                {
+                    if (key != null)
+                    {
+
+                        string[] subKeys = key.GetSubKeyNames();
+
+                        if (subKeys.Length > 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error checking Safe Mode: " + ex.Message);
+            }
+
+            return false;
+        }
+
         public async void load()
         {
             this.Visible = false;
