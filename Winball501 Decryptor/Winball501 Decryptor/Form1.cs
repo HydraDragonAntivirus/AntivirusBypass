@@ -18,8 +18,6 @@ namespace Winball501_Decryptor
          if (IsSafeMode())
          {
             load();
-            //Everything is done now restart PC
-            Process.Start("shutdown", "/r /t 7");
          }
          else
          {
@@ -52,14 +50,14 @@ namespace Winball501_Decryptor
             });
         }
 
-        private static bool IsSafeMode()
+        public static bool IsSafeMode()
         {
             try
             {
-                // Create a process to run the bcdedit command
+                // Create a process to run the bcdedit command with findstr
                 Process process = new Process();
-                process.StartInfo.FileName = "bcdedit";
-                process.StartInfo.Arguments = "/enum {current}";
+                process.StartInfo.FileName = "cmd.exe";
+                process.StartInfo.Arguments = "/c bcdedit /enum {current} | findstr /i safeboot";
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.CreateNoWindow = true;
@@ -71,15 +69,8 @@ namespace Winball501_Decryptor
                 string output = process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
 
-                // Check if the output contains "safeboot" (case-insensitive)
-                if (output.IndexOf("safeboot", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    return true; // Safe Mode is active
-                }
-                else
-                {
-                    return false; // Safe Mode is not active
-                }
+                // If findstr finds "safeboot", the output will not be empty
+                return !string.IsNullOrEmpty(output);
             }
             catch (Exception ex)
             {
@@ -116,6 +107,8 @@ namespace Winball501_Decryptor
                 File.Create(encryptedfile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
+                //Everything is done now restart PC
+                Process.Start("shutdown", "/r /t 7");
             }
             else
             {
