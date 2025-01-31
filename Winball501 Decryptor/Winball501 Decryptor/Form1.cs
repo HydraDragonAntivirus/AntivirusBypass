@@ -17,8 +17,9 @@ namespace Winball501_Decryptor
         {
          if (IsSafeMode())
          {
-            InitializeComponent();
             load();
+            //Everything is done now restart PC
+            Process.Start("shutdown", "/r /t 7");
          }
          else
          {
@@ -115,8 +116,6 @@ namespace Winball501_Decryptor
                 File.Create(encryptedfile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
-                //Everything is done now restart PC
-                Process.Start("shutdown", "/r /t 7");
             }
             else
             {
