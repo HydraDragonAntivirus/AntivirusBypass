@@ -1,4 +1,4 @@
-rule AntivirusBypassWinball {
+rule AntivirusBypassWinball501 {
     meta:
         description = "Detects antivirus bypass techniques related to Windows-based malware"
         author = "Emirhan Ucan"
