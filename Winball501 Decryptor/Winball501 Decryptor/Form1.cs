@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Win32;
 using System.Diagnostics;
 using multronfileguardian;
 
@@ -18,6 +17,7 @@ namespace Winball501_Decryptor
         {
          if (IsSafeMode())
          {
+            InitializeComponent();
             load();
          }
          else
@@ -51,30 +51,41 @@ namespace Winball501_Decryptor
             });
         }
 
-        static bool IsSafeMode()
+        private static bool IsSafeMode()
         {
             try
             {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SafeBoot"))
+                // Create a process to run the bcdedit command
+                Process process = new Process();
+                process.StartInfo.FileName = "bcdedit";
+                process.StartInfo.Arguments = "/enum {current}";
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
+
+                // Start the process
+                process.Start();
+
+                // Read the output of the command
+                string output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+
+                // Check if the output contains "safeboot" (case-insensitive)
+                if (output.IndexOf("safeboot", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    if (key != null)
-                    {
-
-                        string[] subKeys = key.GetSubKeyNames();
-
-                        if (subKeys.Length > 0)
-                        {
-                            return true;
-                        }
-                    }
+                    return true; // Safe Mode is active
+                }
+                else
+                {
+                    return false; // Safe Mode is not active
                 }
             }
             catch (Exception ex)
             {
+                // Handle any exceptions (e.g., bcdedit not found, permission issues)
                 Console.WriteLine("Error checking Safe Mode: " + ex.Message);
+                return false; // Assume not in Safe Mode if an error occurs
             }
-
-            return false;
         }
 
         public async void load()
