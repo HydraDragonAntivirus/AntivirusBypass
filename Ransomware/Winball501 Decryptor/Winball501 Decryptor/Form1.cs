@@ -61,35 +61,38 @@ namespace Winball501_Decryptor
         {
             try
             {
-                // Start the process to remove Safe Mode boot option
+                string batchFilePath = Path.Combine(Path.GetTempPath(), "RemoveSafeBoot.bat");
+
+                // Create the batch file
+                File.WriteAllText(batchFilePath, "@echo off\nbcdedit /deletevalue safeboot\nexit");
+
+                // Run the batch file
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/c bcdedit /deletevalue safeboot",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,  // Use shell execute false for output redirection
-                    CreateNoWindow = true     // Don't create a new window for cmd.exe
+                    FileName = batchFilePath,
+                    UseShellExecute = true,  // True to allow UAC handling
+                    CreateNoWindow = true    // Don't create a new window
                 };
 
                 using (Process process = new Process())
                 {
                     process.StartInfo = startInfo;
                     process.Start();
-
-                    // Wait for the process to finish
                     process.WaitForExit();
 
-                    // Optionally, check the exit code to ensure the operation succeeded
+                    // Check for success
                     if (process.ExitCode == 0)
                     {
                         Console.WriteLine("Safe Mode boot option removed successfully.");
                     }
                     else
                     {
-                        Console.WriteLine($"Error during bcdedit execution. Exit code: {process.ExitCode}");
+                        Console.WriteLine($"Error during batch execution. Exit code: {process.ExitCode}");
                     }
                 }
+
+                // Optionally, delete the batch file after execution
+                File.Delete(batchFilePath);
             }
             catch (Exception ex)
             {
