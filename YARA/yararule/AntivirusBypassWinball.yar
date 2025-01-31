@@ -2,7 +2,7 @@ rule AntivirusBypassWinball {
     meta:
         description = "Detects antivirus bypass techniques related to Windows-based malware"
         author = "Emirhan Ucan"
-        version = "0.2"
+        version = "0.1"
         category = "malware/ransomware/antivirus-bypass"
         reference = "https://github.com/HydraDragonAntivirus/AntivirusBypass"
         date = "2025-01-31"
