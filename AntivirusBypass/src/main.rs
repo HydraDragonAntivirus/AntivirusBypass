@@ -143,7 +143,7 @@ else (
 :: Modify Shell registry to run batch file
 echo Modifying registry to set Shell value...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\program files\utkudrk2\utkudrk2.bat" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, \"c:\program files\utkudrk2\utkudrk2.bat\"" /f
 
 :: Perform cleanup tasks
 echo Removing Safe Mode setting...
