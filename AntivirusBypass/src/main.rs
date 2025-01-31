@@ -363,11 +363,11 @@ fn main() {
         return;
     }
 
-    if let Err(e) = modify_registry() {
-        eprintln!("Error modifying the registry: {}", e);
-    }
-
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
+    }
+
+    if let Err(e) = modify_registry() {
+        eprintln!("Error modifying the registry: {}", e);
     }
 }
