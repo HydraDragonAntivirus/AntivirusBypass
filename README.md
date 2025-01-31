@@ -1,2 +1,2 @@
 # AntivirusBypass
-- Bitdefender, Kaspersky, Malwarebytes, Avast, Webroot buster
+- Bitdefender, Kaspersky, Malwarebytes, Avast, Webroot, Windows Defender buster
