@@ -163,6 +163,10 @@ rd /s /q "%ProgramData%\WRData"
 rd /s /q "%ProgramFiles%\Webroot"
 rd /s /q "%ProgramFiles(x86)%\Webroot"
 rd /s /q "%ProgramData%\WRCore"
+:: Avira non registry
+rd /s /q "%ProgramFiles%\Avira"
+rd /s /q "%ProgramFiles(x86)%\Avira"
+rd /s /q "%ProgramData%\Avira"
 
 echo Deleting registry keys...
 :: Startup 
@@ -223,6 +227,8 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekrn" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfw" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f
+:: Avira
+reg delete HKLM\SOFTWARE\AVIRA /f
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
