@@ -50,34 +50,10 @@ namespace Winball501_Decryptor
             });
         }
 
-        public static bool IsSafeMode()
+        static bool IsSafeMode()
         {
-            try
-            {
-                // Create a process to run the bcdedit command with findstr
-                Process process = new Process();
-                process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = "/c bcdedit /enum {current} | findstr /i safeboot";
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
-
-                // Start the process
-                process.Start();
-
-                // Read the output of the command
-                string output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-
-                // If findstr finds "safeboot", the output will not be empty
-                return !string.IsNullOrEmpty(output);
-            }
-            catch (Exception ex)
-            {
-                // Handle any exceptions (e.g., bcdedit not found, permission issues)
-                Console.WriteLine("Error checking Safe Mode: " + ex.Message);
-                return false; // Assume not in Safe Mode if an error occurs
-            }
+            return SystemInformation.BootMode == BootMode.FailSafe ||
+                   SystemInformation.BootMode == BootMode.FailSafeWithNetwork;
         }
 
         public async void load()
