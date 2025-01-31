@@ -1,0 +1,11 @@
+[package]
+name = "utkudrk2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winreg = "0.55.0"
+windows-sys = { version = "0.59.0", features = ["Win32_UI_WindowsAndMessaging"] }
+
+[build-dependencies]
+winres = "0.1.12"
