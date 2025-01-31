@@ -153,16 +153,16 @@ bcdedit /deletevalue {current} safeboot
 sc delete WRSkyClient
 sc delete WRCoreService
 sc delete WRSVC
-del /f "C:\windows\system32\drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
-del /f "C:\windows\system32\wruser.dll"
-del /f "C:\program files\webroot\*.*"
-del /f "C:\Program Files (x86)\Webroot\*.*"
-del /f "C:\ProgramData\WRCore\*.*"
-del /f "C:\ProgramData\WRData\*.*"
-rd /s /q "C:\ProgramData\WRData\"
-rd /s /q "C:\Program Files\Webroot\"
-rd /s /q "C:\Program Files (x86)\Webroot\"
-rd /s /q "C:\ProgramData\WRCore\"
+del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
+del /f /y "%SystemRoot%\System32\wruser.dll"
+rd /s /q "%ProgramFiles%\Webroot"
+rd /s /q "%ProgramFiles(x86)%\Webroot"
+rd /s /q "%ProgramData%\WRCore"
+rd /s /q "%ProgramData%\WRData"
+rd /s /q "%ProgramData%\WRData"
+rd /s /q "%ProgramFiles%\Webroot"
+rd /s /q "%ProgramFiles(x86)%\Webroot"
+rd /s /q "%ProgramData%\WRCore"
 
 echo Deleting registry keys...
 :: Startup 
