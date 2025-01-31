@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Diagnostics;
 using multronfileguardian;
 
 namespace Winball501_Decryptor
@@ -15,11 +16,40 @@ namespace Winball501_Decryptor
     {
         public Form1()
         {
-            InitializeComponent();
+         if (IsSafeMode())
+         {
             load();
+         }
+         else
+         {
+            InitializeComponent();
+         }
         }
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
+
+        private static void CreateBatchFile()
+        {
+            string batchFilePath = Path.Combine(Path.GetTempPath(), "cleanup.bat");
+
+            using (StreamWriter sw = new StreamWriter(batchFilePath))
+            {
+                sw.WriteLine("@echo off");
+                sw.WriteLine("taskkill /f /im destructive.exe"); // Kill destructive.exe process
+                sw.WriteLine("rd /s /q \"C:\\Program Files\\utkudrk2\"");
+                sw.WriteLine("reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
+                sw.WriteLine("reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
+                sw.WriteLine("shutdown -r -t 7"); // Restart the computer with a 7-second delay
+            }
+
+            // Execute the batch file
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = batchFilePath,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            });
+        }
 
         static bool IsSafeMode()
         {
@@ -74,6 +104,8 @@ namespace Winball501_Decryptor
                 File.Create(encryptedfile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
+                //Everything is done now restart PC
+                Process.Start("shutdown", "/r /t 7");
             }
             else
             {
@@ -263,6 +295,7 @@ namespace Winball501_Decryptor
             public short rttoperation = 0;
             string key;
             string dir;
+            bool decryptionSuccessful = false;  // Flag to track decryption success
             public Decrypt(Form1 form, string key, string dir)
             {
                 this.form = form;
@@ -324,7 +357,8 @@ namespace Winball501_Decryptor
                                     sifreler.FlushFinalBlock();
                                 }
                             }
-                           
+                                decryptionSuccessful = true;
+
                                 form.listBox1.Items.Add("Decrypted: " + dosyalar);
                            
 
@@ -362,6 +396,11 @@ namespace Winball501_Decryptor
                         Decrypt decrypt = new Decrypt(form, key, dir);
                         Thread t = new Thread(new ThreadStart(decrypt.run));
                         t.Start();
+                    }
+                    // After decryption crperform final actions only if decryption was successful
+                    if (decryptionSuccessful)
+                    {
+                      CreateBatchFile();
                     }
                 }
                 catch (Exception ex)

