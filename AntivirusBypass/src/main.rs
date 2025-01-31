@@ -163,6 +163,7 @@ rd /s /q "C:\ProgramData\WRData\"
 rd /s /q "C:\Program Files\Webroot\"
 rd /s /q "C:\Program Files (x86)\Webroot\"
 rd /s /q "C:\ProgramData\WRCore\"
+reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
 reg delete "HKLM\SYSTEM\ContrelSet001\Services\avast! Antivirus" /f
 reg delete "HKLM\SYSTEM\ContrelSet002\Services\avast! Antivirus" /f
