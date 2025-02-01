@@ -1,2 +1,0 @@
-windres -i app.rc -O coff -o app.res --target=pe-i386
-gfortran -o utkudrk2.exe utkudrk2.f90 -lgfortran -Wl,--subsystem,windows app.res

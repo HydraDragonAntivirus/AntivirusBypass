@@ -1,0 +1,9 @@
+[package]
+name = "explorer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+winres = "0.1.12"

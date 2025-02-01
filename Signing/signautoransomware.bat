@@ -4,7 +4,7 @@
 signtool.exe remove /s "destructive".exe"
 
 :: Sign the destructive.exe file with the PFX password
-signtool.exe sign /f "UTKUDORUKBAYRAKTAR.pfx" /p "UTKUDORUKBAYRAKTAR" /fd SHA256 /t http://timestamp.digicert.com /a "destructive.exe"
+signtool.exe sign /f "HydraDragonOS.pfx" /p "DEATHOFANTIVIRUSESBYHYDRADRAGON" /fd SHA256 /t http://timestamp.digicert.com /a "destructive.exe"
 
 echo Files signed successfully
 pause
