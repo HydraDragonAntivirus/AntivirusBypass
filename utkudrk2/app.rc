@@ -1,0 +1,4 @@
+#include <windows.h>
+
+1   ICON    "HydraDragonAV.ico"   // Embedding an icon
+2   MANIFEST "app.manifest" // Embedding the manifest

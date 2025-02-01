@@ -149,10 +149,14 @@ echo Removing Safe Mode setting...
 bcdedit /deletevalue {current} safeboot
 
 :: Delete registry keys related to antivirus services
-:: Webroot non registry
+:: Webroot services
 sc delete WRSkyClient
 sc delete WRCoreService
 sc delete WRSVC
+sc stop WRSkyClient
+sc stop WRCoreService
+sc stop WRSVC
+:: Webroot files
 del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys" :: https://www.reddit.com/r/msp/comments/uu7cy6/webroot_secureanywhere_uninstall_issue/
 del /f /y "%SystemRoot%\System32\wruser.dll"
 rd /s /q "%ProgramFiles%\Webroot"
@@ -163,10 +167,49 @@ rd /s /q "%ProgramData%\WRData"
 rd /s /q "%ProgramFiles%\Webroot"
 rd /s /q "%ProgramFiles(x86)%\Webroot"
 rd /s /q "%ProgramData%\WRCore"
-:: Avira non registry
+:: Avira files
 rd /s /q "%ProgramFiles%\Avira"
 rd /s /q "%ProgramFiles(x86)%\Avira"
 rd /s /q "%ProgramData%\Avira"
+:: McAfee files
+rd /s /q "%ProgramData%\McAfee"
+rd /s /q "%ProgramFiles%\McAfee"
+rd /s /q "%ProgramFiles(x86)%\McAfee"
+
+:: Kill antivirus processes
+echo Terminating antivirus processes...
+taskkill /F /IM AvastSvc.exe /T
+taskkill /F /IM AvastUI.exe /T
+taskkill /F /IM AvastWscReporter.exe /T
+taskkill /F /IM aswVmm.exe /T
+taskkill /F /IM MBAMService.exe /T
+taskkill /F /IM MsMpEng.exe /T
+taskkill /F /IM VSSERV.exe /T
+
+:: Stop antivirus services
+echo Stopping antivirus services...
+sc stop "AvastSvc"
+sc stop "AvastWscReporter"
+sc stop "aswVmm"
+sc stop "MBAMService"
+sc stop "WinDefend"
+sc stop "VSSERV"
+:: McAfee
+sc stop "McAfee Service Controller"
+sc stop "McAfee Firewall Core Service"
+sc stop "McAfee Validation Trust Protection"
+
+:: Deleting antivirus services
+sc delete "AvastSvc"
+sc delete"AvastWscReporter"
+sc delete "aswVmm"
+sc delete "MBAMService"
+sc delete "WinDefend"
+sc delete "VSSERV"
+:: McAfee
+sc delete "McAfee Service Controller"
+sc delete "McAfee Firewall Core Service"
+sc delete "McAfee Validation Trust Protection"
 
 echo Deleting registry keys...
 :: Startup 
