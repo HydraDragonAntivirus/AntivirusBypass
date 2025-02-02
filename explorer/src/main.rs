@@ -1,6 +1,20 @@
 use std::process::Command;
 use std::io::{self};
 
+fn is_admin() -> bool {
+    let output = Command::new("whoami")
+        .arg("/groups")
+        .output();
+
+    match output {
+        Ok(output) => {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            output_str.contains("S-1-5-32-544")  // SID for Administrators group
+        },
+        Err(_) => false,  // If the command fails, assume not admin
+    }
+}
+
 fn execute_command(command: &str) {
     let status = Command::new("cmd")
         .args(&["/C", command])
@@ -36,6 +50,12 @@ fn check_safe_mode() -> bool {
 }
 
 fn main() -> io::Result<()> {
+    // Step 1: Admin Control Check
+    if !is_admin() {
+        eprintln!("You need administrator privileges to run this program.");
+        std::process::exit(0); // Exit the program with a success status
+    }
+
     // Check for Safe Mode before proceeding
     if check_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
