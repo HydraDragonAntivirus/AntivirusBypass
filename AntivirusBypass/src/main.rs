@@ -159,7 +159,7 @@ fn set_system_path_first() -> io::Result<()> {
     // Retrieve the current PATH (this may be the user or process PATH)
     let mut current_path = env::var("PATH").unwrap_or_default();
 
-    // Trim any leading/trailing spaces and quotes
+    // Trim any leading/trailing spaces and quotes from the whole string
     current_path = current_path.trim().trim_matches('"').to_string();
 
     let parts: Vec<&str> = current_path.split(';').collect();
@@ -180,20 +180,24 @@ fn set_system_path_first() -> io::Result<()> {
     let new_path = format!("{}\\;{}", system_drive, current_path);
     println!("[*] Setting system PATH to: {}", new_path);
 
-    // Remove any leading and trailing quotes from new_path.
-    let sanitized_path = new_path.trim_matches('"');
+    // Remove *all* quotes that might be in the new_path string.
+    // (This removes any accidental quotes from any of the segments.)
+    let sanitized_path = new_path.replace("\"", "");
 
-    // Build and execute the command to update the machine PATH.
-    let command = format!("setx /M PATH \"{}\"", sanitized_path);
-    
-    // Execute the command.
-    let output = Command::new("cmd")
-        .args(&["/C", &command])
+    // Debug output: show what the sanitized PATH looks like (using debug formatting)
+    println!("[DEBUG] Sanitized PATH: {:?}", sanitized_path);
+
+    // Call setx directly (bypassing cmd /C) to update the machine PATH.
+    // Note: setx has a limit on the length of the variable (typically 1024 characters)
+    let output = Command::new("setx")
+        .args(&["/M", "PATH", &sanitized_path])
         .output()
-        .expect("Failed to execute command");
+        .expect("Failed to execute setx command");
 
     if !output.status.success() {
         eprintln!("Error updating system PATH: {:?}", output);
+    } else {
+        println!("[+] PATH successfully updated.");
     }
 
     Ok(())
