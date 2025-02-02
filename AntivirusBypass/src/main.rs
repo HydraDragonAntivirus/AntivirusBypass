@@ -180,13 +180,13 @@ fn set_system_path_first() -> io::Result<()> {
     let new_path = format!("{}\\;{}", system_drive, current_path);
     println!("[*] Setting system PATH to: {}", new_path);
 
-    // Ensure that new_path doesn't start with a quote
-    let sanitized_path = new_path.trim_start_matches('"');
+    // Remove any leading and trailing quotes from new_path.
+    let sanitized_path = new_path.trim_matches('"');
 
-    // Build and execute the command to update the machine PATH
+    // Build and execute the command to update the machine PATH.
     let command = format!("setx /M PATH \"{}\"", sanitized_path);
     
-    // Execute the command
+    // Execute the command.
     let output = Command::new("cmd")
         .args(&["/C", &command])
         .output()
