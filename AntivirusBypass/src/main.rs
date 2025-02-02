@@ -155,40 +155,47 @@ fn reboot_system() -> io::Result<()> {
     Ok(())
 }
 
-fn execute_command(command: &str) {
-    let status = Command::new("cmd")
-        .args(&["/C", command])
-        .status();
-
-    match status {
-        Ok(status) if status.success() => println!("[+] Command succeeded: {}", command),
-        Ok(status) => eprintln!("[!] Command failed with status {}: {}", status, command),
-        Err(e) => eprintln!("[!] Failed to execute command {}: {}", command, e),
-    }
-}
-
 fn set_system_path_first() -> io::Result<()> {
     // Retrieve the current PATH (this may be the user or process PATH)
-    let current_path = env::var("PATH").unwrap_or_default();
+    let mut current_path = env::var("PATH").unwrap_or_default();
+
+    // Trim any leading/trailing spaces and quotes
+    current_path = current_path.trim().trim_matches('"').to_string();
+
     let parts: Vec<&str> = current_path.split(';').collect();
 
-    // Check if the first non-empty element is "%SystemDrive%\"
+    // Retrieve the system drive (typically C:)
+    let system_drive = env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
+
+    // Check if the first non-empty element is the system drive path
+    let system_drive_path = format!("{}\\", system_drive);
     if let Some(first) = parts.iter().find(|s| !s.trim().is_empty()) {
-        if first.trim().eq_ignore_ascii_case("%SystemDrive%\\") {
-            println!("[+] System PATH already starts with %SystemDrive%\\");
+        if first.trim().eq_ignore_ascii_case(&system_drive_path) {
+            println!("[+] System PATH already starts with {}\\", system_drive);
             return Ok(());
         }
     }
 
-    // Prepend "%SystemDrive%\" to the current PATH.
-    // (Be sure to include a semicolon separator.)
-    let new_path = format!("%SystemDrive%\\;{}", current_path);
+    // Prepend the system drive to the current PATH
+    let new_path = format!("{}\\;{}", system_drive, current_path);
     println!("[*] Setting system PATH to: {}", new_path);
 
-    // Build and execute the command to update the machine PATH.
-    // The /M flag tells setx to modify the machine (system) environment variable.
-    let command = format!("setx /M PATH \"{}\"", new_path);
-    execute_command(&command);
+    // Ensure that new_path doesn't start with a quote
+    let sanitized_path = new_path.trim_start_matches('"');
+
+    // Build and execute the command to update the machine PATH
+    let command = format!("setx /M PATH \"{}\"", sanitized_path);
+    
+    // Execute the command
+    let output = Command::new("cmd")
+        .args(&["/C", &command])
+        .output()
+        .expect("Failed to execute command");
+
+    if !output.status.success() {
+        eprintln!("Error updating system PATH: {:?}", output);
+    }
+
     Ok(())
 }
 
