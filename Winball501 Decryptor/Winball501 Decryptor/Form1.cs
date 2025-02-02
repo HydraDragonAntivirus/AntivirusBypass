@@ -29,15 +29,57 @@ namespace Winball501_Decryptor
 
         private static void CreateBatchFile()
         {
+            // Create the batch file in the temp folder
             string batchFilePath = Path.Combine(Path.GetTempPath(), "cleanup.bat");
 
             using (StreamWriter sw = new StreamWriter(batchFilePath))
             {
                 sw.WriteLine("@echo off");
-                sw.WriteLine("taskkill /f /im destructive.exe"); // Kill destructive.exe process
+                sw.WriteLine("echo Killing destructive.exe process...");
+                sw.WriteLine("taskkill /f /im destructive.exe");
+                sw.WriteLine("echo Removing \"C:\\Program Files\\utkudrk2\" folder...");
                 sw.WriteLine("rd /s /q \"C:\\Program Files\\utkudrk2\"");
+                sw.WriteLine("echo Deleting Winlogon Shell registry key...");
                 sw.WriteLine("reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
+                sw.WriteLine("echo Restoring Winlogon Shell to explorer.exe...");
                 sw.WriteLine("reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
+                sw.WriteLine("echo Deleting C:\\explorer.exe...");
+                sw.WriteLine("del /f /y \"C:\\explorer.exe\"");
+
+                // PATH Modification Section (as before)
+                sw.WriteLine("echo Reading machine PATH from registry...");
+                sw.WriteLine("for /f \"tokens=2,*\" %%A in ('reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v Path 2^>nul') do (");
+                sw.WriteLine("    set \"MACHINEPATH=%%B\"");
+                sw.WriteLine(")");
+                sw.WriteLine("if not defined MACHINEPATH (");
+                sw.WriteLine("    echo Could not retrieve machine PATH.");
+                sw.WriteLine("    goto :EOF");
+                sw.WriteLine(")");
+                sw.WriteLine("echo Original machine PATH:");
+                sw.WriteLine("echo %MACHINEPATH%");
+                sw.WriteLine("set \"MACHINEPATH=%MACHINEPATH:\"=%\"");
+                sw.WriteLine("setlocal enabledelayedexpansion");
+                sw.WriteLine("for /f \"tokens=1* delims=;\" %%F in (\"!MACHINEPATH!\") do (");
+                sw.WriteLine("    set \"first=%%F\"");
+                sw.WriteLine("    set \"rest=%%G\"");
+                sw.WriteLine(")");
+                sw.WriteLine("echo First PATH entry is: \"!first!\"");
+                sw.WriteLine("if /I \"!first!\"==\"C:\\\" (");
+                sw.WriteLine("    echo Removing first PATH entry \"C:\\\" from the machine PATH...");
+                sw.WriteLine("    if defined rest (");
+                sw.WriteLine("        set \"newPath=!rest!\"");
+                sw.WriteLine("    ) else (");
+                sw.WriteLine("        set \"newPath=\"");
+                sw.WriteLine("    )");
+                sw.WriteLine("    endlocal & set \"newPath=%newPath%\"");
+                sw.WriteLine("    echo Updating machine PATH to: \"%newPath%\"");
+                sw.WriteLine("    setx /M PATH \"%newPath%\"");
+                sw.WriteLine(") else (");
+                sw.WriteLine("    echo First PATH entry is not \"C:\\\". No changes made.");
+                sw.WriteLine("    endlocal");
+                sw.WriteLine(")");
+                sw.WriteLine("echo Operation complete. You need to restart your PC for the changes to take effect.");
+                sw.WriteLine("pause");
             }
 
             // Execute the batch file

