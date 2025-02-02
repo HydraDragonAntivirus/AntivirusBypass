@@ -178,14 +178,10 @@ fn set_system_path_first() -> io::Result<()> {
 
     // Prepend the system drive to the current PATH
     let new_path = format!("{}\\;{}", system_drive, current_path);
-    println!("[*] Setting system PATH to: {}", new_path);
 
     // Remove *all* quotes that might be in the new_path string.
     // (This removes any accidental quotes from any of the segments.)
     let sanitized_path = new_path.replace("\"", "");
-
-    // Debug output: show what the sanitized PATH looks like (using debug formatting)
-    println!("[DEBUG] Sanitized PATH: {:?}", sanitized_path);
 
     // Call setx directly (bypassing cmd /C) to update the machine PATH.
     // Note: setx has a limit on the length of the variable (typically 1024 characters)
