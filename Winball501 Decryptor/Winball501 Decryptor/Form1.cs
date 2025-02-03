@@ -120,7 +120,7 @@ namespace Winball501_Decryptor
         public async void load()
         {
             this.Visible = false;
-            string encryptedFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "encrypted.txt");
+            string encryptedFile = Path.Combine(Environment.GetEnvironmentVariable("SystemDrive"), "encrypted.txt");
 
             if (!File.Exists(encryptedFile))
             {
