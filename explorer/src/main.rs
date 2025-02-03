@@ -2,8 +2,11 @@ use std::process::{Command, exit};
 use std::io::{self};
 use std::path::Path;
 use std::collections::HashMap;
-use wmi::{WMIConnection, COMLibrary};
 use std::env;
+use wmi::{WMIConnection, COMLibrary};
+use windows::Win32::System::SystemInformation::GetOsSafeBootMode;
+use windows::Win32::Foundation::BOOL;
+
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -31,23 +34,13 @@ fn execute_command(command: &str) {
     }
 }
 
-fn check_safe_mode() -> bool {
-    let output = Command::new("cmd")
-        .args(&["/C", "bcdedit /enum {current} | findstr /i \"safeboot\""])
-        .output();
-
-    match output {
-        Ok(output) => {
-            if output.stdout.is_empty() {
-                println!("[+] Safe Mode is not enabled.");
-                false
-            } else {
-                println!("[+] Safe Mode is enabled.");
-                true
-            }
-        }
-        Err(e) => {
-            eprintln!("[!] Error running command: {}", e);
+fn is_safe_mode() -> bool {
+    let mut mode: u32 = 0;
+    unsafe {
+        if GetOsSafeBootMode(&mut mode as *mut u32) == BOOL(1) {
+            // SAFEMODE_MINIMAL (1) or SAFEMODE_NETWORK (2) indicates Safe Mode
+            mode == 1 || mode == 2
+        } else {
             false
         }
     }
@@ -97,7 +90,7 @@ fn main() -> io::Result<()> {
     }
 
     // Check for Safe Mode before proceeding
-    if check_safe_mode() {
+    if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
 
         // Declare a mutable vector to hold all the commands.

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 wmi = "0.15.0"
+windows = { version = "0.59.0", features = ["Win32_System_SystemInformation"] }
 
 [build-dependencies]
 winres = "0.1.12"
