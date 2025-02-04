@@ -8,11 +8,18 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using multronfileguardian;
-
+using System.Runtime.InteropServices;
+using System.CodeDom;
 namespace Winball501_Decryptor
 {
     public partial class Form1 : Form
     {
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern bool ChangeBackground(uint u, uint p, string l, uint winball);
+        const uint spi = 0x0014;
+        const uint spif = 0x01;
+        const uint send = 0x02;
+
         public Form1()
         {
             if (IsNotSafeMode())
@@ -130,6 +137,7 @@ namespace Winball501_Decryptor
                 await Task.WhenAll(tasks);
                 this.Visible = true;
                 //Everything is done now restart PC
+                ChangeBackground(spi, 0, Properties.Resources.winball501.ToString(), spif | send);
                 Process.Start("shutdown", "/r /t 7");
             }
             else
