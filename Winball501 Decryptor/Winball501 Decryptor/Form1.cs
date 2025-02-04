@@ -15,7 +15,7 @@ namespace Winball501_Decryptor
     public partial class Form1 : Form
     {
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        public static extern bool ChangeBackground(uint u, uint p, string l, uint winball);
+        public static extern bool SystemParametersInfo(uint u, uint p, string l, uint winball);
         const uint spi = 0x0014;
         const uint spif = 0x01;
         const uint send = 0x02;
@@ -28,6 +28,11 @@ namespace Winball501_Decryptor
             }
             else
             {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    Properties.Resources.winball501.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    File.WriteAllBytes(Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", ms.ToArray());
+                }
                 InitializeComponent();
             }
         }
@@ -136,8 +141,8 @@ namespace Winball501_Decryptor
                 File.Create(encryptedFile).Close();
                 await Task.WhenAll(tasks);
                 this.Visible = true;
+                SystemParametersInfo(spi, 0, Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", spif | send);
                 //Everything is done now restart PC
-                ChangeBackground(spi, 0, Properties.Resources.winball501.ToString(), spif | send);
                 Process.Start("shutdown", "/r /t 7");
             }
             else
