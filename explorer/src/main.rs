@@ -231,16 +231,15 @@ fn get_signature_subject(file_path: &str) -> Option<String> {
 }
 
 /// Removes the entire folder containing the file at `file_path`.
-fn remove_folder(file_path: &str) {
+fn remove_folder(file_path: &str) -> io::Result<()> {
     let path = Path::new(file_path);
     if let Some(parent) = path.parent() {
         println!("Deleting folder: {}", parent.display());
-        match fs::remove_dir_all(parent) {
-            Ok(_) => println!("Successfully removed folder: {}", parent.display()),
-            Err(err) => eprintln!("Error removing folder {}: {}", parent.display(), err),
-        }
+        fs::remove_dir_all(parent)?; // Propagate errors
+        println!("Successfully removed folder: {}", parent.display());
+        Ok(())
     } else {
-        eprintln!("Could not determine parent folder for file: {}", file_path);
+        Err(io::Error::new(io::ErrorKind::Other, "Could not determine parent folder"))
     }
 }
 
@@ -248,29 +247,47 @@ fn remove_folder(file_path: &str) {
 /// For each file, it retrieves its certificate subject string (without validation)
 /// and checks whether that subject contains any antivirus substring.
 /// If a match is found, the folder containing that file is removed.
-fn scan_directory(dir: &str) {
+fn scan_directory(dir: &str) -> io::Result<()> {
     println!("Scanning directory: {}", dir);
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            // Process only files.
-            if path.is_file() {
-                let file_path = path.to_string_lossy().to_string();
-                if let Some(subject) = get_signature_subject(&file_path) {
-                    let subject_lower = subject.to_lowercase();
-                    for av in ANTIVIRUS_LIST {
-                        if subject_lower.contains(&av.to_lowercase()) {
-                            println!("File {} has certificate subject matching antivirus: {}", file_path, subject);
-                            remove_folder(&file_path);
-                            break;
+
+    let entries = fs::read_dir(dir)?;
+
+    for entry in entries {
+        match entry {
+            Ok(entry) => {
+                let path = entry.path();
+
+                if path.is_file() {
+                    let file_path = path.to_string_lossy().to_string();
+
+                    match get_signature_subject(&file_path) {
+                        Some(subject) => {
+                            let subject_lower = subject.to_lowercase();
+                            for av in ANTIVIRUS_LIST {
+                                if subject_lower.contains(&av.to_lowercase()) {
+                                    println!(
+                                        "File {} has certificate subject matching antivirus: {}",
+                                        file_path, subject
+                                    );
+                                    if let Err(e) = remove_folder(&file_path) {
+                                        eprintln!("Failed to remove folder for {}: {}", file_path, e);
+                                    }                                    
+                                    break;
+                                }
+                            }
+                        }
+                        None => {
+                            eprintln!("Failed to retrieve certificate subject for file: {}", file_path);
                         }
                     }
                 }
             }
+            Err(e) => {
+                eprintln!("Error reading directory entry: {}", e);
+            }
         }
-    } else {
-        eprintln!("Could not read directory: {}", dir);
     }
+    Ok(())
 }
 
 fn main() -> io::Result<()> {
@@ -482,10 +499,12 @@ fn main() -> io::Result<()> {
         if let Ok(program_data) = env::var("ProgramData") {
             directories.push(program_data);
         }
-    
-        // Scan each directory.
+
+        // Scan each directory and handle errors properly.
         for dir in directories {
-            scan_directory(&dir);
+            if let Err(e) = scan_directory(&dir) {
+                eprintln!("Error scanning directory {}: {}", dir, e);
+            }
         }
     
         println!("Scan completed.");
