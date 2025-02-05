@@ -228,8 +228,7 @@ fn get_signature_subject(file_path: &str) -> Option<String> {
     let mut msg: isize = 0; // HCRYPTMSG is represented as isize.
 
     // Call CryptQueryObject.
-    // We need to cast the mutable references to the expected pointer types.
-    unsafe {
+    let query_result = unsafe {
         CryptQueryObject(
             CERT_QUERY_OBJECT_FILE,
             file_path_w.as_ptr() as *const c_void,
@@ -243,7 +242,11 @@ fn get_signature_subject(file_path: &str) -> Option<String> {
             Some(&mut msg as *mut isize as *mut *mut c_void),
             None,
         )
-        .expect("CryptQueryObject failed");
+    };
+
+    // If CryptQueryObject fails, return None.
+    if query_result.is_err() {
+        return None;
     }
 
     // Enumerate the first certificate in the store.
