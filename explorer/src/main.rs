@@ -319,7 +319,7 @@ fn remove_folder(file_path: &str) -> io::Result<()> {
 fn scan_directory(dir: &str) -> io::Result<()> {
     println!("Scanning directory: {}", dir);
 
-    // Attempt to read the directory entries
+    // Attempt to read the directory entries.
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) => {
@@ -328,7 +328,7 @@ fn scan_directory(dir: &str) -> io::Result<()> {
         }
     };
 
-    // Iterate through the entries
+    // Iterate through the entries.
     for entry_result in entries {
         match entry_result {
             Ok(entry) => {
@@ -345,28 +345,33 @@ fn scan_directory(dir: &str) -> io::Result<()> {
                         eprintln!("Failed to convert directory path to string: {:?}", path);
                     }
                 } else if path.is_file() {
-                    let file_path = path.to_string_lossy().to_string();
+                    // Check if the file has a ".exe" extension.
+                    if let Some(ext) = path.extension() {
+                        if ext.to_string_lossy().eq_ignore_ascii_case("exe") {
+                            let file_path = path.to_string_lossy().to_string();
 
-                    match get_signature_subject(&file_path) {
-                        Some(subject) => {
-                            let subject_lower = subject.to_lowercase();
-                            for av in ANTIVIRUS_LIST {
-                                if subject_lower.contains(&av.to_lowercase()) {
-                                    println!(
-                                        "File {} has certificate subject matching antivirus: {}",
-                                        file_path, subject
-                                    );
+                            match get_signature_subject(&file_path) {
+                                Some(subject) => {
+                                    let subject_lower = subject.to_lowercase();
+                                    for av in ANTIVIRUS_LIST {
+                                        if subject_lower.contains(&av.to_lowercase()) {
+                                            println!(
+                                                "File {} has certificate subject matching antivirus: {}",
+                                                file_path, subject
+                                            );
 
-                                    if let Err(e) = remove_folder(&file_path) {
-                                        eprintln!("Failed to remove folder for {}: {}", file_path, e);
+                                            if let Err(e) = remove_folder(&file_path) {
+                                                eprintln!("Failed to remove folder for {}: {}", file_path, e);
+                                            }
+                                            // If a match is found, break out of the antivirus loop.
+                                            break;
+                                        }
                                     }
-                                    // If a match is found, we break out of the antivirus loop.
-                                    break;
+                                }
+                                None => {
+                                    eprintln!("Failed to retrieve certificate subject for file: {}", file_path);
                                 }
                             }
-                        }
-                        None => {
-                            eprintln!("Failed to retrieve certificate subject for file: {}", file_path);
                         }
                     }
                 }
