@@ -220,7 +220,7 @@ fn reboot_system() -> io::Result<()> {
     let status = Command::new("shutdown.exe")
         .arg("-r")
         .arg("-t")
-        .arg("7")
+        .arg("2")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output();
