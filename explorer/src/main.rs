@@ -597,7 +597,7 @@ fn takeown_icacls_and_del(file_path: &str) {
     // Build the commands.
     let takeown_cmd = format!(r#"takeown /f {}"#, quoted_path);
     let icacls_cmd = format!(r#"icacls {} /grant %USERNAME%:F"#, quoted_path);
-    let del_cmd = format!(r#"del /q /a {}"#, quoted_path);
+    let del_cmd = format!(r#"del /f /q /a {}"#, quoted_path);
 
     // Execute the commands in sequence.
     execute_command(&takeown_cmd);
@@ -605,21 +605,13 @@ fn takeown_icacls_and_del(file_path: &str) {
     execute_command(&del_cmd);
 }
 
-/// Helper function to take ownership, grant permissions, and then delete a file.
-/// The file_path parameter should be provided without surrounding quotes.
-fn takeown_icacls_and_del(file_path: &str) {
-    // Wrap the file path in quotes to handle spaces or special characters.
-    let quoted_path = format!(r#""{}""#, file_path);
-
-    // Build the commands.
-    let takeown_cmd = format!(r#"takeown /f {}"#, quoted_path);
-    let icacls_cmd = format!(r#"icacls {} /grant %USERNAME%:F"#, quoted_path);
-    let del_cmd = format!(r#"del /q /a {}"#, quoted_path);
-
-    // Execute the commands in sequence.
-    execute_command(&takeown_cmd);
-    execute_command(&icacls_cmd);
-    execute_command(&del_cmd);
+/// For directory deletion, this helper adds commands to take ownership,
+/// grant full control, and then remove the directory.
+fn add_takeown_and_delete(commands: &mut Vec<String>, directory: &str) {
+    // Note: The directory path should already be quoted if needed.
+    commands.push(format!(r#"takeown /f {} /r /d Y"#, directory));
+    commands.push(format!(r#"icacls {} /grant %USERNAME%:F /t"#, directory));
+    commands.push(format!(r#"rd /s /q {}"#, directory));
 }
 
 fn main() -> io::Result<()> {
