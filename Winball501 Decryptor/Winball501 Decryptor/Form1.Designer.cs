@@ -117,7 +117,7 @@
             this.Controls.Add(this.textBox1);
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
-            this.Text = "Winball501 Decryptor 2.0";
+            this.Text = "Winball501 Decryptor 2.5";
             this.ResumeLayout(false);
             this.PerformLayout();
 
