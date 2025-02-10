@@ -200,7 +200,7 @@ const ANTIVIRUS_LIST: &[&str] = &[
     "Bitdefender SRL",
     "Avira Operations GmbH & Co.KG",
     "AVG Technologies CZ, s.r.o.",
-    "AVAST Software s.r.o.",
+    "Avast Software s.r.o.",
     "Check Point Software Technologies Ltd.",
     "VIRUSBLOKADA ODO",
     "Qihoo 360 Software(Beijing) Company Limited",
