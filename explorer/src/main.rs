@@ -388,11 +388,11 @@ const BLOCKED_DOMAINS: &[&str] = &[
     "virustotal.com", "hybrid-analysis.com", "hybridanalysis.com", "filescan.io", "360totalsecurity.com",
     "acronis.com", "adaware.com", "avast.com", "avira.com", "bitdefender.com", "clamav.net", "clamav.com",
     "comodo.com", "drweb.com", "emsisoft.com", "eset.com", "f-secure.com", "fortinet.com", "gdatasoftware.com",
-    "hitmanpro.com", "ikarussecurity.com", "k7computing.com", "kaspersky.com", "malwarebytes.com",
+    "gdata-software.com", "hitmanpro.com", "ikarussecurity.com", "k7computing.com", "kaspersky.com", "malwarebytes.com",
     "mcafee.com", "norton.com", "pandasecurity.com", "sophos.com", "spyhunter.com", "superantispyware.com",
     "trendmicro.com", "vipre.com", "webroot.com", "zonealarm.com", "avg.com", "escanav.com", "totalav.com",
     "combofix.org", "adguard.com", "smadav.net", "smadav.ltd", "drweb.ru", "intego.com", "crowdstrike.com",
-    "esetnod32.ru", "nictasoft.com", "jotti.org", "any.run", "tria.ge", "opswat.com"
+    "esetnod32.ru", "nictasoft.com", "jotti.org", "any.run", "tria.ge", "opswat.com", "surshark.com", "cybereason.com",
 ];
 
 /// Returns the path to the hosts file based on the `%SystemRoot%` environment variable.
