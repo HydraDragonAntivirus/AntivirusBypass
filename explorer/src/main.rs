@@ -625,7 +625,7 @@ fn main() -> io::Result<()> {
     if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
 
-        // Use a vector for commands that don’t involve file deletion.
+        // Use a vector for commands that do not involve file deletion.
         let mut commands: Vec<String> = Vec::new();
 
         // Group 2: Cleanup Safe Mode setting
