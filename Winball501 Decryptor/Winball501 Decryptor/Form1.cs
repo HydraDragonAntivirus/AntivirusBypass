@@ -573,6 +573,24 @@ namespace Winball501_Decryptor
                 decryptionTasks.Add(Task.Run(() => decryptForDownloads.run()));
 
                 // Wait for all decryption tasks to finish
+                DriveInfo[] drives = DriveInfo.GetDrives();
+                foreach (DriveInfo drive in drives)
+                {
+                    if (drive.IsReady)
+                    {
+                        string path = drive.Name;
+
+                        // Retrieve the system drive from the environment variable.
+                        // Default to "C:" if not set.
+                        string systemDrive = Environment.GetEnvironmentVariable("SystemDrive") ?? "C:";
+
+                        if (!path.StartsWith(systemDrive, StringComparison.OrdinalIgnoreCase))
+                        {
+                            tasks.Add(Task.Run(() => decrypt.run()));
+                        }
+
+                    }
+                }
                 await Task.WhenAll(decryptionTasks);
 
                 // Once all decryption tasks are done, proceed with cleanup
