@@ -358,8 +358,6 @@ fn main() {
             if let Err(e) = change_system_date() {
                 eprintln!("Error changing system date: {}", e);
             }
-            // Wait for 10 seconds before trying again.
-            thread::sleep(Duration::from_secs(10));
         }
     });
 
