@@ -45,19 +45,6 @@ namespace Winball501_Decryptor
                 sw.WriteLine("echo Killing destructive.exe process...");
                 sw.WriteLine("taskkill /f /im destructive.exe");
 
-                // Using %ProgramFiles% to get the program files path dynamically
-                sw.WriteLine("echo Removing \"%ProgramFiles%\\utkudrk2\" folder...");
-                sw.WriteLine("rd /s /q \"%ProgramFiles%\\utkudrk2\"");
-
-                sw.WriteLine("echo Deleting Winlogon Shell registry key...");
-                sw.WriteLine("reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /f");
-                sw.WriteLine("echo Restoring Winlogon Shell to explorer.exe...");
-                sw.WriteLine("reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" /v Shell /t REG_SZ /d \"explorer.exe\" /f");
-
-                // Using %SystemDrive% for explorer.exe path
-                sw.WriteLine("echo Deleting \"%SystemDrive%\\explorer.exe\"...");
-                sw.WriteLine("del /f /y \"%SystemDrive%\\explorer.exe\"");
-
                 // PATH Modification Section (as before)
                 sw.WriteLine("echo Reading machine PATH from registry...");
                 sw.WriteLine("for /f \"tokens=2,*\" %%A in ('reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v Path 2^>nul') do (");

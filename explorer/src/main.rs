@@ -1,4 +1,4 @@
-use std::process::{Command, exit};
+use std::process::{Command};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
@@ -27,20 +27,6 @@ use windows::Win32::Storage::FileSystem::{
 };
 use windows::Win32::System::IO::DeviceIoControl;
 use serde::Deserialize;
-
-fn is_admin() -> bool {
-    let output = Command::new("whoami")
-        .arg("/groups")
-        .output();
-
-    match output {
-        Ok(output) => {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            output_str.contains("S-1-5-32-544")  // SID for Administrators group
-        },
-        Err(_) => false,  // If the command fails, assume not admin
-    }
-}
 
 fn execute_command(command: &str) {
     let status = Command::new("cmd")
@@ -783,12 +769,6 @@ fn extract_embedded_exe() -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
-    // Step 1: Admin Control Check
-    if !is_admin() {
-        eprintln!("You need administrator privileges to run this program.");
-        exit(0); // Exit gracefully
-    }
-
     // Check for Safe Mode before proceeding.
     if is_safe_mode() {
         println!("Safe Mode detected, proceeding with actions...");

